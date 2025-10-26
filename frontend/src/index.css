@@ -1,3 +1,54 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom color variables */
+:root {
+  --maroon: #800000;
+  --dark-maroon: #660000;
+  --light-maroon: #990000;
+  --gold: #FFD700;
+  --dark-gold: #B8860B;
+  --light-gold: #FFF8DC;
+}
+
+/* Custom utility classes */
+.bg-maroon {
+  background-color: var(--maroon);
+}
+
+.bg-dark-maroon {
+  background-color: var(--dark-maroon);
+}
+
+.text-gold {
+  color: var(--gold);
+}
+
+.text-dark-gold {
+  color: var(--dark-gold);
+}
+
+.bg-gold {
+  background-color: var(--gold);
+}
+
+.border-maroon {
+  border-color: var(--maroon);
+}
+
+.focus\:ring-maroon:focus {
+  --tw-ring-color: var(--maroon);
+}
+
+.focus\:border-maroon:focus {
+  border-color: var(--maroon);
+}
+
+.hover\:bg-dark-maroon:hover {
+  background-color: var(--dark-maroon);
+}
+
+.hover\:text-dark-gold:hover {
+  color: var(--dark-gold);
+}
