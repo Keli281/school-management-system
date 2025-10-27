@@ -14,23 +14,26 @@ const Dashboard = () => {
   }, []);
 
   const fetchDashboardData = async () => {
-    try {
-      const [studentsRes, feesRes] = await Promise.all([
-        studentsAPI.getAll(),
-        feesAPI.getDashboardSummary()
-      ]);
+  try {
+    const [studentsRes, paymentsRes] = await Promise.all([
+      studentsAPI.getAll(),
+      feesAPI.getPayments()  // ✅ Use this instead - it EXISTS in your backend
+    ]);
 
-      setStats({
-        totalStudents: studentsRes.data.count,
-        totalFees: feesRes.data.summary.totalCollected,
-        recentPayments: [] // We'll add this later
-      });
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Calculate total fees manually from all payments
+    const totalFees = paymentsRes.data.payments.reduce((sum, payment) => sum + payment.amountPaid, 0);
+
+    setStats({
+      totalStudents: studentsRes.data.count,
+      totalFees: totalFees,  // ✅ Now this will have the real total
+      recentPayments: [] // We'll add this later
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (loading) {
     return (
@@ -57,7 +60,7 @@ const Dashboard = () => {
           </div>
           <div>
             <h1 className="text-4xl font-bold mb-2 text-black">Awinja Education Centre</h1>
-            <p className="text-gold text-lg italic">Honoring God through Excellence</p>
+            <p className="text-gold text-lg italic">Honouring God through Excellence</p>
           </div>
         </div>
       </div>
@@ -112,7 +115,7 @@ const Dashboard = () => {
               <span className="text-green-600 text-xl">💰</span>
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-3">Total revenue collected this year</p>
+          <p className="text-sm text-gray-500 mt-3">Total revenue collected</p>
         </div>
       </div>
 
