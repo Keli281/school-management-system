@@ -174,7 +174,7 @@ const Financials = () => {
               <p className="text-3xl font-bold text-blue-600 mt-2">{currentStructure.length}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-blue-600 text-xl"></span>
+              <span className="text-blue-600 text-xl">🏫</span>
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-3">Different grade levels</p>
@@ -187,7 +187,7 @@ const Financials = () => {
               <p className="text-3xl font-bold text-green-600 mt-2">KSh {calculateGrandTotal().toLocaleString()}</p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <span className="text-green-600 text-xl"></span>
+              <span className="text-green-600 text-xl">💰</span>
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-3">Total for all grades annually</p>
