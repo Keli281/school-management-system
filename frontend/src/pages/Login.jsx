@@ -55,7 +55,7 @@ const Login = () => {
             Administrator Login
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Awinja Education Center Management System
+            Awinja Education Centre Management System
           </p>
         </div>
 
@@ -128,10 +128,10 @@ const Login = () => {
         {/* School Info */}
         <div className="text-center">
           <p className="text-xs text-gray-500">
-            Awinja Education Center
+            Awinja Education Centre
           </p>
           <p className="text-xs text-gray-500 italic">
-            Honoring God through Excellence
+            Honouring God through Excellence
           </p>
         </div>
       </div>

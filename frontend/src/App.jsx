@@ -60,7 +60,7 @@ const NavigationWrapper = ({ children }) => {
                 <div className="w-8 h-8 bg-maroon rounded-full flex items-center justify-center mr-2">
                   <span className="text-white text-sm font-bold">AEC</span>
                 </div>
-                <span className="hidden sm:inline">Awinja Education Center</span>
+                <span className="hidden sm:inline">Awinja Education Centre</span>
                 <span className="sm:hidden">Awinja EC</span>
               </h1>
               {user && (
@@ -182,9 +182,9 @@ const NavigationWrapper = ({ children }) => {
       <footer className="bg-white border-t mt-12">
         <div className="container mx-auto px-4 py-6">
           <div className="text-center text-gray-600">
-            <p className="font-semibold text-maroon">Awinja Education Center</p>
-            <p className="text-sm italic">Honoring God through Excellence</p>
-            <p className="text-xs mt-2">© 2025 Awinja Education Center. All rights reserved.</p>
+            <p className="font-semibold text-maroon">Awinja Education Centre</p>
+            <p className="text-sm italic">Honouring God through Excellence</p>
+            <p className="text-xs mt-2">© 2025 Awinja Education Centre. All rights reserved.</p>
           </div>
         </div>
       </footer>
