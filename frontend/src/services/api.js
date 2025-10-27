@@ -1,11 +1,13 @@
 import axios from 'axios';
 
-// Use environment variable or fallback to Render URL
+// Change from local to deployed backend
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://awinja-backend.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
 });
+
+console.log('🔗 API Base URL:', API_BASE_URL); // Add this to debug
 
 // Add token to requests automatically
 api.interceptors.request.use(

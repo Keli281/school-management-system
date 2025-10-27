@@ -62,6 +62,14 @@ const StudentDetail = () => {
   const totalPaid = payments.reduce((sum, payment) => sum + (payment.amountPaid || 0), 0);
   const currentBalance = payments.length > 0 ? payments[payments.length - 1]?.balance || 0 : 0;
 
+  // Group payments by academic year
+  const paymentsByYear = payments.reduce((acc, payment) => {
+    const year = payment.academicYear || '2025';
+    if (!acc[year]) acc[year] = [];
+    acc[year].push(payment);
+    return acc;
+  }, {});
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -173,43 +181,51 @@ const StudentDetail = () => {
           </div>
         </div>
         
-        {payments.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Term</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Amount Paid</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Balance</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {payments.map((payment) => (
-                  <tr key={payment._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(payment.datePaid).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        payment.term === 'Term 1' ? 'bg-blue-100 text-blue-800' :
-                        payment.term === 'Term 2' ? 'bg-green-100 text-green-800' :
-                        'bg-purple-100 text-purple-800'
-                      }`}>
-                        {payment.term}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                      KSh {payment.amountPaid?.toLocaleString() || '0'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
-                      KSh {payment.balance?.toLocaleString() || '0'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        {Object.keys(paymentsByYear).length > 0 ? (
+          Object.keys(paymentsByYear).sort().reverse().map(year => (
+            <div key={year} className="mb-8">
+              <h3 className="text-lg font-semibold text-maroon mb-4 flex items-center">
+                <span className="w-6 h-6 bg-maroon rounded-full mr-2 flex items-center justify-center text-white text-xs">{year}</span>
+                Academic Year {year}
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full mb-4">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Term</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Amount Paid</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {paymentsByYear[year].map((payment) => (
+                      <tr key={payment._id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(payment.datePaid).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            payment.term === 'Term 1' ? 'bg-blue-100 text-blue-800' :
+                            payment.term === 'Term 2' ? 'bg-green-100 text-green-800' :
+                            'bg-purple-100 text-purple-800'
+                          }`}>
+                            {payment.term}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                          KSh {payment.amountPaid?.toLocaleString() || '0'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
+                          KSh {payment.balance?.toLocaleString() || '0'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))
         ) : (
           <div className="text-center py-12 text-gray-500">
             <div className="text-6xl mb-4">💸</div>

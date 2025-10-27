@@ -1,7 +1,68 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const Financials = () => {
-  const feeStructure = [
+  const [selectedYear, setSelectedYear] = useState('2026');
+
+  // Fee structure for 2025 (without admission fees, daycare, and grade 4)
+  const feeStructure2025 = [
+    {
+      grade: 'Playgroup',
+      admissionFee: '-',
+      term1: '3,000',
+      term2: '2,800', 
+      term3: '2,800',
+      total: '8,600',
+      notes: 'Flat fee structure'
+    },
+    {
+      grade: 'PP1',
+      admissionFee: '-',
+      term1: '3,000',
+      term2: '2,800',
+      term3: '2,800',
+      total: '8,600',
+      notes: 'Flat fee structure'
+    },
+    {
+      grade: 'PP2',
+      admissionFee: '-',
+      term1: '3,000',
+      term2: '2,800',
+      term3: '2,800',
+      total: '8,600',
+      notes: 'Flat fee structure'
+    },
+    {
+      grade: 'Grade 1',
+      admissionFee: '-',
+      term1: '3,500',
+      term2: '3,000',
+      term3: '3,000',
+      total: '9,500',
+      notes: 'Standard primary fees'
+    },
+    {
+      grade: 'Grade 2',
+      admissionFee: '-',
+      term1: '3,500',
+      term2: '3,000',
+      term3: '3,000',
+      total: '9,500',
+      notes: 'Standard primary fees'
+    },
+    {
+      grade: 'Grade 3',
+      admissionFee: '-',
+      term1: '3,500',
+      term2: '3,000',
+      term3: '3,000',
+      total: '9,500',
+      notes: 'Standard primary fees'
+    }
+  ];
+
+  // Fee structure for 2026 (with admission fees and daycare)
+  const feeStructure2026 = [
     {
       grade: 'Day Care',
       admissionFee: '-',
@@ -76,31 +137,44 @@ const Financials = () => {
     }
   ];
 
+  const currentStructure = selectedYear === '2026' ? feeStructure2026 : feeStructure2025;
+  const showAdmissionFee = selectedYear === '2026';
+
   const calculateGrandTotal = () => {
-    return feeStructure.reduce((total, grade) => {
+    return currentStructure.reduce((total, grade) => {
       const gradeTotal = parseInt(grade.total.replace(/,/g, ''));
       return total + gradeTotal;
     }, 0);
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-8">
       {/* Header Section */}
       <div className="text-center bg-gradient-to-r from-maroon to-dark-maroon rounded-2xl shadow-xl p-8 text-black">
         <h1 className="text-4xl font-bold mb-4">School Fee Structure</h1>
-        <p className="text-gold text-lg italic">Academic Year 2026</p>
+        <div className="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-6">
+          <p className="text-gold text-lg italic">Academic Year</p>
+          <select
+            className="px-4 py-2 bg-white bg-opacity-20 border border-gold rounded-lg focus:outline-none focus:ring-2 focus:ring-gold text-black font-medium"
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+          >
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+          </select>
+        </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Summary Cards - REMOVED Average Fee Card */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-blue-500 transform hover:scale-[1.02] transition-all duration-300">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-700">Total Grades</h3>
-              <p className="text-3xl font-bold text-blue-600 mt-2">{feeStructure.length}</p>
+              <p className="text-3xl font-bold text-blue-600 mt-2">{currentStructure.length}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-blue-600 text-xl">🏫</span>
+              <span className="text-blue-600 text-xl"></span>
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-3">Different grade levels</p>
@@ -113,30 +187,19 @@ const Financials = () => {
               <p className="text-3xl font-bold text-green-600 mt-2">KSh {calculateGrandTotal().toLocaleString()}</p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <span className="text-green-600 text-xl">💰</span>
+              <span className="text-green-600 text-xl"></span>
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-3">Total for all grades annually</p>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-purple-500 transform hover:scale-[1.02] transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-700">Average Fee</h3>
-              <p className="text-3xl font-bold text-purple-600 mt-2">KSh {(calculateGrandTotal() / feeStructure.length).toLocaleString()}</p>
-            </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-              <span className="text-purple-600 text-xl">📊</span>
-            </div>
-          </div>
-          <p className="text-sm text-gray-500 mt-3">Average per grade level</p>
         </div>
       </div>
 
       {/* Fee Structure Table */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="bg-maroon p-6">
-          <h2 className="text-2xl font-bold text-white text-center">Detailed Fee Structure (KSh)</h2>
+          <h2 className="text-2xl font-bold text-white text-center">
+            Detailed Fee Structure for {selectedYear} (KSh)
+          </h2>
           <p className="text-gold text-center mt-2">All amounts in Kenyan Shillings</p>
         </div>
         
@@ -147,9 +210,11 @@ const Financials = () => {
                 <th className="px-6 py-4 text-left text-xs font-medium text-maroon uppercase tracking-wider border-b">
                   Grade Level
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-maroon uppercase tracking-wider border-b">
-                  Admission Fee
-                </th>
+                {showAdmissionFee && (
+                  <th className="px-6 py-4 text-left text-xs font-medium text-maroon uppercase tracking-wider border-b">
+                    Admission Fee
+                  </th>
+                )}
                 <th className="px-6 py-4 text-left text-xs font-medium text-maroon uppercase tracking-wider border-b">
                   Term 1
                 </th>
@@ -168,7 +233,7 @@ const Financials = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {feeStructure.map((grade, index) => (
+              {currentStructure.map((grade, index) => (
                 <tr 
                   key={grade.grade} 
                   className={`hover:bg-gray-50 transition-colors duration-200 ${
@@ -189,13 +254,15 @@ const Financials = () => {
                       <span className="font-medium text-gray-900">{grade.grade}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      grade.admissionFee === '-' ? 'bg-gray-100 text-gray-800' : 'bg-blue-100 text-blue-800'
-                    }`}>
-                      {grade.admissionFee}
-                    </span>
-                  </td>
+                  {showAdmissionFee && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        grade.admissionFee === '-' ? 'bg-gray-100 text-gray-800' : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {grade.admissionFee}
+                      </span>
+                    </td>
+                  )}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
                     {grade.term1}
                   </td>
@@ -229,7 +296,7 @@ const Financials = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
           <div className="flex items-start space-x-3">
             <span className="text-maroon mt-1">•</span>
-            <p>Admission fees are one-time payments for new students</p>
+            <p>{selectedYear === '2026' ? 'Admission fees are one-time payments for new students' : 'No admission fees for the 2025 academic year'}</p>
           </div>
           <div className="flex items-start space-x-3">
             <span className="text-maroon mt-1">•</span>
@@ -241,32 +308,8 @@ const Financials = () => {
           </div>
           <div className="flex items-start space-x-3">
             <span className="text-maroon mt-1">•</span>
-            <p>Stationery and uniform and KNEC registration are exclusive</p>
+            <p>Stationery, uniform, and KNEC registration are exclusive</p>
           </div>
-        </div>
-      </div>
-
-      {/* Contact for Queries */}
-      <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-maroon border-dashed text-center">
-        <h3 className="text-2xl font-bold text-maroon mb-2">Need More Information?</h3>
-        <p className="text-gray-600 mb-4">
-          Contact the school administration for detailed fee breakdown, payment plans, or any queries.
-        </p>
-        <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
-          <a 
-            href="tel:+254722951183" 
-            className="inline-flex items-center bg-maroon text-white px-6 py-3 rounded-lg hover:bg-dark-maroon transition-colors"
-          >
-            <span className="mr-2">📞</span>
-            Call: 0722 951 183
-          </a>
-          <a 
-            href="mailto:awinjaeducationcentre@gmail.com" 
-            className="inline-flex items-center bg-gold text-gray-800 px-6 py-3 rounded-lg hover:bg-dark-gold transition-colors"
-          >
-            <span className="mr-2">✉️</span>
-            Email Us
-          </a>
         </div>
       </div>
     </div>

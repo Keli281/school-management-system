@@ -23,9 +23,9 @@ const feePaymentSchema = new mongoose.Schema({
     required: true,
     enum: ['Term 1', 'Term 2', 'Term 3']
   },
-  year: {
+  academicYear: {
     type: String,
-    default: '2025'
+    required: true // REMOVED THE DEFAULT VALUE
   },
   amountPaid: {
     type: Number,

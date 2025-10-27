@@ -4,12 +4,14 @@ import { feesAPI, studentsAPI } from '../services/api';
 const Fees = () => {
   const [payments, setPayments] = useState([]);
   const [students, setStudents] = useState([]);
+  const [feeStructures, setFeeStructures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [formData, setFormData] = useState({
     studentId: '',
     term: 'Term 1',
+    academicYear: '2026',
     amountPaid: ''
   });
 
@@ -19,12 +21,14 @@ const Fees = () => {
 
   const fetchData = async () => {
     try {
-      const [paymentsRes, studentsRes] = await Promise.all([
+      const [paymentsRes, studentsRes, structuresRes] = await Promise.all([
         feesAPI.getPayments(),
-        studentsAPI.getAll()
+        studentsAPI.getAll(),
+        feesAPI.getFeeStructures()
       ]);
       setPayments(paymentsRes.data.payments);
       setStudents(studentsRes.data.students);
+      setFeeStructures(structuresRes.data.structures);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -35,25 +39,29 @@ const Fees = () => {
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
     try {
+      console.log('🔄 STEP A: Form submitted with data:', formData);
+
+      const paymentData = {
+        studentId: formData.studentId,
+        term: formData.term,
+        academicYear: formData.academicYear,
+        amountPaid: Number(formData.amountPaid)
+      };
+
+      console.log('🔄 STEP B: Sending to backend:', paymentData);
+
       if (editingPayment) {
-        // Update existing payment
-        await feesAPI.updatePayment(editingPayment._id, {
-          ...formData,
-          amountPaid: Number(formData.amountPaid)
-        });
+        await feesAPI.updatePayment(editingPayment._id, paymentData);
         alert('Payment updated successfully!');
       } else {
-        // Create new payment
-        await feesAPI.recordPayment({
-          ...formData,
-          amountPaid: Number(formData.amountPaid)
-        });
+        await feesAPI.recordPayment(paymentData);
         alert('Payment recorded successfully!');
       }
       
       resetForm();
-      fetchData(); // Refresh payments
+      fetchData();
     } catch (error) {
+      console.error('❌ Frontend Error:', error);
       alert('Error: ' + (error.response?.data?.message || error.message));
     }
   };
@@ -63,6 +71,7 @@ const Fees = () => {
     setFormData({
       studentId: payment.studentId,
       term: payment.term,
+      academicYear: payment.academicYear,
       amountPaid: payment.amountPaid.toString()
     });
     setShowPaymentForm(true);
@@ -73,7 +82,7 @@ const Fees = () => {
       try {
         await feesAPI.deletePayment(paymentId);
         alert('Payment deleted successfully!');
-        fetchData(); // Refresh payments
+        fetchData();
       } catch (error) {
         alert('Error deleting payment: ' + (error.response?.data?.message || error.message));
       }
@@ -83,16 +92,26 @@ const Fees = () => {
   const resetForm = () => {
     setShowPaymentForm(false);
     setEditingPayment(null);
-    setFormData({ studentId: '', term: 'Term 1', amountPaid: '' });
-  };
-
-  const getStudentName = (studentId) => {
-    const student = students.find(s => s._id === studentId);
-    return student ? `${student.firstName} ${student.lastName}` : 'Unknown';
+    setFormData({ 
+      studentId: '', 
+      term: 'Term 1', 
+      academicYear: '2026',
+      amountPaid: '' 
+    });
   };
 
   // Calculate total collected
   const totalCollected = payments.reduce((sum, payment) => sum + payment.amountPaid, 0);
+
+  // Calculate fees collected per grade
+  const feesPerGrade = students.reduce((acc, student) => {
+    const gradePayments = payments.filter(p => p.studentId === student._id);
+    const gradeTotal = gradePayments.reduce((sum, payment) => sum + payment.amountPaid, 0);
+    acc[student.grade] = (acc[student.grade] || 0) + gradeTotal;
+    return acc;
+  }, {});
+
+  const grades = ['Playgroup', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'];
 
   if (loading) {
     return (
@@ -104,35 +123,34 @@ const Fees = () => {
 
   return (
     <div className="space-y-6 pb-8">
-    {/* Header with Stats */}
-    <div className="bg-gradient-to-r from-maroon to-dark-maroon rounded-2xl shadow-xl p-6">
+      {/* Header with Stats */}
+      <div className="bg-gradient-to-r from-maroon to-dark-maroon rounded-2xl shadow-xl p-6">
         <div className="flex flex-col md:flex-row justify-between items-center">
-        <div>
+          <div>
             <h1 className="text-3xl font-bold text-black">Fees Management</h1>
             <p className="text-gold mt-2 font-medium">Track and manage student fee payments</p>
-        </div>
-        <div className="mt-4 md:mt-0 text-center md:text-right">
+          </div>
+          <div className="mt-4 md:mt-0 text-center md:text-right">
             <p className="text-2xl font-bold text-black">KSh {totalCollected.toLocaleString()}</p>
             <p className="text-gold font-medium">Total Collected</p>
+          </div>
         </div>
-        </div>
-    </div>
+      </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg shadow p-4 text-center">
-          <p className="text-2xl font-bold text-maroon">{payments.length}</p>
-          <p className="text-gray-600">Total Payments</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4 text-center">
-          <p className="text-2xl font-bold text-green-600">{students.length}</p>
-          <p className="text-gray-600">Total Students</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4 text-center">
-          <p className="text-2xl font-bold text-blue-600">
-            {payments.length > 0 ? (totalCollected / payments.length).toLocaleString() : 0}
-          </p>
-          <p className="text-gray-600">Average Payment</p>
+      {/* Fees Collected Per Grade - NEW LAYOUT */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Fees Collected Per Grade</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
+          {grades.map(grade => (
+            <div key={grade} className="text-center bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <p className="text-sm font-medium text-gray-600 mb-2 truncate" title={grade}>
+                {grade.replace('Grade', 'G')}
+              </p>
+              <p className="text-lg font-bold text-green-600">
+                KSh {(feesPerGrade[grade] || 0).toLocaleString()}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -143,7 +161,7 @@ const Fees = () => {
           className="bg-maroon text-white px-4 py-2 rounded-lg hover:bg-dark-maroon transition-colors flex items-center"
           onClick={() => setShowPaymentForm(true)}
         >
-          <span className="mr-2">💰</span>
+          <span className="mr-2">+</span>
           {editingPayment ? 'Update Payment' : 'Record Payment'}
         </button>
       </div>
@@ -155,6 +173,7 @@ const Fees = () => {
             <h2 className="text-xl font-bold mb-4 text-maroon">
               {editingPayment ? 'Edit Payment' : 'Record Fee Payment'}
             </h2>
+            
             <form onSubmit={handleSubmitPayment} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -173,6 +192,22 @@ const Fees = () => {
                       {student.admissionNumber} - {student.firstName} {student.lastName}
                     </option>
                   ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Academic Year
+                </label>
+                <select
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
+                  value={formData.academicYear}
+                  onChange={(e) => setFormData({...formData, academicYear: e.target.value})}
+                >
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                  <option value="2027">2027</option>
                 </select>
               </div>
 
@@ -239,7 +274,7 @@ const Fees = () => {
                   Student
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">
-                  Admission No.
+                  Year
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">
                   Term
@@ -265,7 +300,13 @@ const Fees = () => {
                     {payment.studentName}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {payment.admissionNumber}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      payment.academicYear === '2025' ? 'bg-blue-100 text-blue-800' :
+                      payment.academicYear === '2026' ? 'bg-green-100 text-green-800' :
+                      'bg-purple-100 text-purple-800'
+                    }`}>
+                      {payment.academicYear}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -311,18 +352,6 @@ const Fees = () => {
             <p className="text-sm">Click "Record Payment" to get started</p>
           </div>
         )}
-      </div>
-
-      {/* Summary Footer */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600">
-            Showing {payments.length} payment(s)
-          </span>
-          <span className="text-sm font-medium text-maroon">
-            Total Collected: KSh {totalCollected.toLocaleString()}
-          </span>
-        </div>
       </div>
     </div>
   );

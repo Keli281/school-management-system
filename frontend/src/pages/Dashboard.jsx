@@ -57,7 +57,7 @@ const Dashboard = () => {
           </div>
           <div>
             <h1 className="text-4xl font-bold mb-2 text-black">Awinja Education Centre</h1>
-            <p className="text-gold text-lg italic">Honouring God through Excellence</p>
+            <p className="text-gold text-lg italic">Honoring God through Excellence</p>
           </div>
         </div>
       </div>

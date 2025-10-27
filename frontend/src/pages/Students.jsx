@@ -114,6 +114,14 @@ const Students = () => {
     student.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Calculate students per grade
+  const gradeCounts = students.reduce((acc, student) => {
+    acc[student.grade] = (acc[student.grade] || 0) + 1;
+    return acc;
+  }, {});
+
+  const grades = ['Playgroup', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'];
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -138,25 +146,53 @@ const Students = () => {
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-4 text-center">
-          <p className="text-2xl font-bold text-maroon">{students.filter(s => s.grade.includes('Grade')).length}</p>
-          <p className="text-gray-600 text-sm">Primary Students</p>
+     {/* Quick Stats - IMPROVED LAYOUT */}
+<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+  {/* Gender Distribution Card */}
+  <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+    <h3 className="text-lg font-semibold text-gray-800 mb-4">Gender Distribution</h3>
+    <div className="grid grid-cols-2 gap-4">
+      <div className="text-center">
+        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+          <span className="text-blue-600 text-2xl">👦</span>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 text-center">
-          <p className="text-2xl font-bold text-green-600">{students.filter(s => s.grade.includes('PP')).length}</p>
-          <p className="text-gray-600 text-sm">Pre-Primary</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4 text-center">
-          <p className="text-2xl font-bold text-blue-600">{students.filter(s => s.gender === 'Male').length}</p>
-          <p className="text-gray-600 text-sm">Male Students</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4 text-center">
-          <p className="text-2xl font-bold text-pink-600">{students.filter(s => s.gender === 'Female').length}</p>
-          <p className="text-gray-600 text-sm">Female Students</p>
-        </div>
+        <p className="text-2xl font-bold text-blue-600">{students.filter(s => s.gender === 'Male').length}</p>
+        <p className="text-sm text-gray-600">Male Students</p>
       </div>
+      <div className="text-center">
+        <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-2">
+          <span className="text-pink-600 text-2xl">👧</span>
+        </div>
+        <p className="text-2xl font-bold text-pink-600">{students.filter(s => s.gender === 'Female').length}</p>
+        <p className="text-sm text-gray-600">Female Students</p>
+      </div>
+    </div>
+  </div>
+
+  {/* Total Students Card */}
+  <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+    <h3 className="text-lg font-semibold text-gray-800 mb-4">Total Students</h3>
+    <div className="text-center">
+      <p className="text-4xl font-bold text-green-600">{students.length}</p>
+      <p className="text-sm text-gray-600 mt-2">Enrolled Students</p>
+    </div>
+  </div>
+
+  {/* Students by Grade Card */}
+        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Students by Grade</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {grades.map(grade => (
+                <div key={grade} className="text-center">
+                <p className="text-lg font-bold text-purple-600">{gradeCounts[grade] || 0}</p>
+                <p className="text-xs text-gray-600 truncate" title={grade}>
+                    {grade.replace('Grade', 'G')}
+                </p>
+                </div>
+            ))}
+            </div>
+        </div>
+        </div>
 
       {/* Action Bar */}
       <div className="flex justify-between items-center bg-white rounded-lg shadow p-4">
@@ -175,6 +211,7 @@ const Students = () => {
         </button>
       </div>
 
+      {/* EVERYTHING BELOW THIS LINE IS COMPLETELY UNCHANGED */}
       {showStudentForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">

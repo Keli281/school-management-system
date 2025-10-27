@@ -9,7 +9,7 @@ const Student = require('../models/Student');
 // GET all fee structures
 router.get('/structure', async (req, res) => {
   try {
-    const structures = await FeeStructure.find().sort({ grade: 1 });
+    const structures = await FeeStructure.find().sort({ academicYear: -1, grade: 1 });
     res.json({
       success: true,
       structures: structures
@@ -18,56 +18,6 @@ router.get('/structure', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching fee structures',
-      error: error.message
-    });
-  }
-});
-
-// POST - Add multiple fee structures at once
-router.post('/structure/bulk', async (req, res) => {
-  try {
-    const structures = req.body.structures;
-    
-    if (!structures || !Array.isArray(structures)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide an array of fee structures'
-      });
-    }
-
-    const results = await FeeStructure.insertMany(structures);
-    
-    res.status(201).json({
-      success: true,
-      message: `Successfully added ${results.length} fee structures!`,
-      structures: results
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: 'Error adding fee structures',
-      error: error.message
-    });
-  }
-});
-
-// UPDATE fee structure
-router.put('/structure/:grade', async (req, res) => {
-  try {
-    const structure = await FeeStructure.findOneAndUpdate(
-      { grade: req.params.grade },
-      req.body,
-      { new: true, upsert: true }
-    );
-    res.json({
-      success: true,
-      message: 'Fee structure updated successfully!',
-      structure: structure
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: 'Error updating fee structure',
       error: error.message
     });
   }
@@ -98,7 +48,7 @@ router.get('/payments/student/:admissionNumber', async (req, res) => {
   try {
     const payments = await FeePayment.find({ 
       admissionNumber: req.params.admissionNumber 
-    }).sort({ datePaid: -1 });
+    }).sort({ academicYear: -1, datePaid: -1 });
     
     const totalPaid = payments.reduce((sum, payment) => sum + payment.amountPaid, 0);
     
@@ -119,9 +69,11 @@ router.get('/payments/student/:admissionNumber', async (req, res) => {
   }
 });
 
-// POST - Record a new fee payment (SMART VERSION)
+// POST - Record a new fee payment (FIXED VERSION)
 router.post('/payments', async (req, res) => {
   try {
+    console.log('🎯 STEP 1: Received payment data from frontend:', req.body);
+
     // Get student details
     const student = await Student.findById(req.body.studentId);
     if (!student) {
@@ -131,19 +83,54 @@ router.post('/payments', async (req, res) => {
       });
     }
 
-    // Get fee structure for student's grade
-    const feeStructure = await FeeStructure.findOne({ grade: student.grade });
+    console.log('🎯 STEP 2: Student found - Grade:', student.grade);
+
+    // Use the academicYear from request body
+    const academicYear = req.body.academicYear;
+    console.log('🎯 STEP 3: Academic Year from frontend:', academicYear);
+    
+    if (!academicYear) {
+      return res.status(400).json({
+        success: false,
+        message: 'Academic year is required'
+      });
+    }
+
+    // Get fee structure for student's grade and academic year
+    console.log('🎯 STEP 4: Looking for fee structure - Grade:', student.grade, 'Year:', academicYear);
+    
+    const feeStructure = await FeeStructure.findOne({ 
+      grade: student.grade,
+      academicYear: academicYear
+    });
+    
+    console.log('🎯 STEP 5: Fee structure found:', feeStructure);
+    
     if (!feeStructure) {
+      console.log('❌ ERROR: No fee structure found for:', { grade: student.grade, year: academicYear });
+      
+      // Show all available fee structures for debugging
+      const allStructures = await FeeStructure.find({ grade: student.grade });
+      console.log('📋 Available fee structures for this grade:', allStructures);
+      
       return res.status(404).json({
         success: false,
-        message: `Fee structure not found for grade: ${student.grade}`
+        message: `Fee structure not found for grade: ${student.grade} and academic year: ${academicYear}. Available years: ${allStructures.map(s => s.academicYear).join(', ')}`
       });
     }
 
     // Calculate term total and balance
     const termNumber = req.body.term.split(' ')[1]; // Extract "1" from "Term 1"
     const termAmount = feeStructure[`term${termNumber}Amount`];
+    
+    console.log('🎯 STEP 6: Calculation details:');
+    console.log('   - Term:', req.body.term);
+    console.log('   - Term Number:', termNumber);
+    console.log('   - Term Amount from DB:', termAmount);
+    console.log('   - Amount Paid:', req.body.amountPaid);
+    
     const balance = termAmount - req.body.amountPaid;
+    console.log('   - Balance Calculated:', balance);
 
     // Create payment record with calculated balance
     const paymentData = {
@@ -152,14 +139,20 @@ router.post('/payments', async (req, res) => {
       studentName: `${student.firstName} ${student.lastName}`,
       grade: student.grade,
       term: req.body.term,
-      year: req.body.year || '2025',
+      academicYear: academicYear, // This is the KEY - using the selected year
       amountPaid: req.body.amountPaid,
       balance: balance,
       datePaid: req.body.datePaid || new Date()
     };
 
+    console.log('🎯 STEP 7: Saving payment with data:', paymentData);
+
     const payment = new FeePayment(paymentData);
     await payment.save();
+    
+    console.log('✅ SUCCESS: Payment saved to database!');
+    console.log('   - Academic Year in saved payment:', payment.academicYear);
+    console.log('   - Balance in saved payment:', payment.balance);
     
     res.status(201).json({
       success: true,
@@ -172,107 +165,10 @@ router.post('/payments', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('💥 BIG ERROR:', error);
     res.status(400).json({
       success: false,
       message: 'Error recording fee payment',
-      error: error.message
-    });
-  }
-});
-
-// GET student fee balance summary
-router.get('/balance/:admissionNumber', async (req, res) => {
-  try {
-    const student = await Student.findOne({ admissionNumber: req.params.admissionNumber });
-    if (!student) {
-      return res.status(404).json({
-        success: false,
-        message: 'Student not found'
-      });
-    }
-
-    const feeStructure = await FeeStructure.findOne({ grade: student.grade });
-    if (!feeStructure) {
-      return res.status(404).json({
-        success: false,
-        message: `Fee structure not found for grade: ${student.grade}`
-      });
-    }
-
-    // Get all payments for this student
-    const payments = await FeePayment.find({ admissionNumber: req.params.admissionNumber });
-    
-    // Calculate totals per term
-    const termSummary = {};
-    ['Term 1', 'Term 2', 'Term 3'].forEach(term => {
-      const termNumber = term.split(' ')[1];
-      const termTotal = feeStructure[`term${termNumber}Amount`];
-      const termPayments = payments.filter(p => p.term === term);
-      const totalPaid = termPayments.reduce((sum, p) => sum + p.amountPaid, 0);
-      const balance = termTotal - totalPaid;
-
-      termSummary[term] = {
-        termTotal: termTotal,
-        totalPaid: totalPaid,
-        balance: balance,
-        paymentCount: termPayments.length
-      };
-    });
-
-    res.json({
-      success: true,
-      student: {
-        admissionNumber: student.admissionNumber,
-        name: `${student.firstName} ${student.lastName}`,
-        grade: student.grade
-      },
-      termSummary: termSummary,
-      allPayments: payments
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error calculating student balance',
-      error: error.message
-    });
-  }
-});
-
-// GET fee dashboard summary
-router.get('/dashboard/summary', async (req, res) => {
-  try {
-    const totalPayments = await FeePayment.aggregate([
-      {
-        $group: {
-          _id: null,
-          totalCollected: { $sum: '$amountPaid' },
-          paymentCount: { $sum: 1 }
-        }
-      }
-    ]);
-
-    const termSummary = await FeePayment.aggregate([
-      {
-        $group: {
-          _id: '$term',
-          total: { $sum: '$amountPaid' },
-          count: { $sum: 1 }
-        }
-      }
-    ]);
-
-    res.json({
-      success: true,
-      summary: {
-        totalCollected: totalPayments[0]?.totalCollected || 0,
-        totalPayments: totalPayments[0]?.paymentCount || 0,
-        byTerm: termSummary
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching fee summary',
       error: error.message
     });
   }
@@ -291,9 +187,21 @@ router.put('/payments/:id', async (req, res) => {
 
     // Get student details for recalculation
     const student = await Student.findById(req.body.studentId || payment.studentId);
-    const feeStructure = await FeeStructure.findOne({ grade: student.grade });
+    const academicYear = req.body.academicYear || payment.academicYear;
     
-    const termNumber = req.body.term.split(' ')[1];
+    const feeStructure = await FeeStructure.findOne({ 
+      grade: student.grade,
+      academicYear: academicYear
+    });
+    
+    if (!feeStructure) {
+      return res.status(404).json({
+        success: false,
+        message: `Fee structure not found for grade: ${student.grade} and academic year: ${academicYear}`
+      });
+    }
+    
+    const termNumber = (req.body.term || payment.term).split(' ')[1];
     const termAmount = feeStructure[`term${termNumber}Amount`];
     const balance = termAmount - req.body.amountPaid;
 
@@ -302,7 +210,8 @@ router.put('/payments/:id', async (req, res) => {
       {
         ...req.body,
         balance: balance,
-        amountPaid: req.body.amountPaid
+        amountPaid: req.body.amountPaid,
+        academicYear: academicYear
       },
       { new: true, runValidators: true }
     );
