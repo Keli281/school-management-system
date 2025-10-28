@@ -40,4 +40,4 @@ npm start
 - **Backend**: Manual deployment via Render dashboard
 
 ## Developed by
-- ** Natalie Awinja** @Keli281
+- Natalie Awinja @Keli281
