@@ -25,9 +25,7 @@ const Login = () => {
     setError('');
 
     try {
-      console.log('Attempting login with:', { email: formData.email });
       const response = await authAPI.login(formData);
-      console.log('Login response:', response.data);
       
       if (response.data.success) {
         // Save token and user data to localStorage
@@ -42,14 +40,8 @@ const Login = () => {
         setError(response.data.message || 'Login was unsuccessful');
       }
     } catch (error) {
-      console.error('Login error:', error);
       // Show detailed error for debugging
       const errorMessage = error.response?.data?.message || error.message || 'Login failed. Please try again.';
-      console.error('Full error details:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        error: error
-      });
       setError(errorMessage);
     } finally {
       setLoading(false);
