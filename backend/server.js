@@ -3,7 +3,11 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
+const compression = require('compression');
 require('dotenv').config();
+
+// Utility to check if we're in production
+const isProduction = process.env.NODE_ENV === 'production';
 
 const app = express();
 
