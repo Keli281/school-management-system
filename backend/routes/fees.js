@@ -3,11 +3,12 @@ const router = express.Router();
 const FeePayment = require('../models/FeePayment');
 const FeeStructure = require('../models/FeeStructure');
 const Student = require('../models/Student');
+const { auth } = require('../middleware/authMiddleware');
 
 // === FEE STRUCTURE ROUTES ===
 
-// GET all fee structures
-router.get('/structure', async (req, res) => {
+// GET all fee structures (protected)
+router.get('/structure', auth, async (req, res) => {
   try {
     const structures = await FeeStructure.find().sort({ academicYear: -1, grade: 1 });
     res.json({
@@ -25,8 +26,8 @@ router.get('/structure', async (req, res) => {
 
 // === FEE PAYMENT ROUTES ===
 
-// GET all fee payments
-router.get('/payments', async (req, res) => {
+// GET all fee payments (protected)
+router.get('/payments', auth, async (req, res) => {
   try {
     const payments = await FeePayment.find().sort({ datePaid: -1 });
     res.json({
@@ -43,8 +44,8 @@ router.get('/payments', async (req, res) => {
   }
 });
 
-// GET fee payments for a specific student
-router.get('/payments/student/:admissionNumber', async (req, res) => {
+// GET fee payments for a specific student (protected)
+router.get('/payments/student/:admissionNumber', auth, async (req, res) => {
   try {
     const payments = await FeePayment.find({ 
       admissionNumber: req.params.admissionNumber 
@@ -69,8 +70,8 @@ router.get('/payments/student/:admissionNumber', async (req, res) => {
   }
 });
 
-// POST - Record a new fee payment (FIXED VERSION)
-router.post('/payments', async (req, res) => {
+// POST - Record a new fee payment (protected)
+router.post('/payments', auth, async (req, res) => {
   try {
     console.log('🎯 STEP 1: Received payment data from frontend:', req.body);
 
@@ -174,8 +175,8 @@ router.post('/payments', async (req, res) => {
   }
 });
 
-// PUT - Update a fee payment
-router.put('/payments/:id', async (req, res) => {
+// PUT - Update a fee payment (protected)
+router.put('/payments/:id', auth, async (req, res) => {
   try {
     const payment = await FeePayment.findById(req.params.id);
     if (!payment) {
@@ -230,8 +231,8 @@ router.put('/payments/:id', async (req, res) => {
   }
 });
 
-// DELETE - Remove a fee payment
-router.delete('/payments/:id', async (req, res) => {
+// DELETE - Remove a fee payment (protected)
+router.delete('/payments/:id', auth, async (req, res) => {
   try {
     const payment = await FeePayment.findByIdAndDelete(req.params.id);
     if (!payment) {

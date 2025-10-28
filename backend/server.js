@@ -1,21 +1,50 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 require('dotenv').config();
 
 const app = express();
 
 // Middleware
-app.use(cors());
+// CORS configuration for both development and production
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://awinja-education-centre.vercel.app'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+// JSON body parser
 app.use(express.json());
 
-// Add Security Headers (Add this block)
+// Helmet adds several HTTP headers to improve security
+app.use(helmet());
+
+// Additional security headers (redundant with helmet but left intentionally for clarity)
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   next();
 });
+
+// Rate limiter for auth endpoints to mitigate brute-force attacks
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // limit each IP to 20 requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many requests from this IP, please try again later.'
+  }
+});
+
+// Apply limiter to login/register endpoints
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 // MongoDB Connection - THIS IS WHERE WE CONNECT TO REAL DATABASE
 mongoose.connect(process.env.MONGODB_URI, {

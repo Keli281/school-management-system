@@ -1,11 +1,16 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { auth } = require('../middleware/authMiddleware');
 const router = express.Router();
 
 // Generate JWT Token
 const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET || 'awinja_education_center_secret_2025', {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is not set');
+  }
+  return jwt.sign({ userId }, secret, {
     expiresIn: '30d',
   });
 };
@@ -62,6 +67,21 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    
+    // Input validation
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required'
+      });
+    }
+    
+    if (typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid input types'
+      });
+    }
 
     // Find user by email
     const user = await User.findOne({ email, isActive: true });
@@ -106,13 +126,18 @@ router.post('/login', async (req, res) => {
 });
 
 // GET /api/auth/me - Get current user (protected route)
-router.get('/me', async (req, res) => {
+router.get('/me', auth, async (req, res) => {
   try {
-    // We'll add middleware later to protect this route
-    // For now, this is a placeholder
+    // req.user is populated by auth middleware
+    const user = req.user;
     res.json({
       success: true,
-      message: 'Auth me endpoint - will be protected'
+      user: {
+        id: user._id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role
+      }
     });
   } catch (error) {
     res.status(500).json({
