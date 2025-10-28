@@ -10,7 +10,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
-  withCredentials: true
+  // withCredentials removed to avoid CORS credential errors when using localStorage for tokens
 });
 
 console.log('🔗 API Base URL:', API_BASE_URL); // Add this to debug
