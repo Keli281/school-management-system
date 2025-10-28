@@ -38,3 +38,6 @@ npm start
 ## Deployment
 - **Frontend**: Automatic deployment via Vercel on Git push
 - **Backend**: Manual deployment via Render dashboard
+
+## Developed by
+- ** Natalie Awinja @Keli281**
