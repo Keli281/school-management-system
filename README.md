@@ -1,6 +1,6 @@
 # Awinja Education Centre - School Management System
 
-A comprehensive school management system built with the MERN stack to digitize school operations for Awinja Education Centre.
+A comprehensive school management system built with the MERN stack to digitize school operations for a family-owned educational institution.
 
 ## Features
 
@@ -9,6 +9,7 @@ A comprehensive school management system built with the MERN stack to digitize s
 - **Teacher Management**: Staff records and class assignments  
 - **Financial Reporting**: Fee structure comparison across academic years
 - **Dashboard Analytics**: Real-time insights and statistics
+- Future enhancements are in place
 
 ## Tech Stack
 
