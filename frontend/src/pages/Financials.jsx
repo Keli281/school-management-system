@@ -174,7 +174,7 @@ const Financials = () => {
               <p className="text-3xl font-bold text-blue-600 mt-2">{currentStructure.length}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-blue-600 text-xl">🏫</span>
+              <i className="fas fa-school text-blue-600 text-xl"></i>
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-3">Different grade levels</p>
@@ -187,7 +187,7 @@ const Financials = () => {
               <p className="text-3xl font-bold text-green-600 mt-2">KSh {calculateGrandTotal().toLocaleString()}</p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <span className="text-green-600 text-xl">💰</span>
+              <i className="fas fa-money-bill-wave text-green-600 text-xl"></i>
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-3">Total for all grades annually</p>
@@ -290,24 +290,24 @@ const Financials = () => {
       {/* Important Notes Section */}
       <div className="bg-gradient-to-r from-gold to-dark-gold rounded-xl shadow-lg p-6">
         <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-          <span className="w-6 h-6 bg-maroon rounded-full mr-2 flex items-center justify-center text-xs text-white">!</span>
+          <i className="fas fa-exclamation-circle text-maroon mr-2"></i>
           Important Fee Information
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
           <div className="flex items-start space-x-3">
-            <span className="text-maroon mt-1">•</span>
+            <i className="fas fa-circle text-maroon mt-1 text-xs"></i>
             <p>{selectedYear === '2026' ? 'Admission fees are one-time payments for new students' : 'No admission fees for the 2025 academic year'}</p>
           </div>
           <div className="flex items-start space-x-3">
-            <span className="text-maroon mt-1">•</span>
+            <i className="fas fa-circle text-maroon mt-1 text-xs"></i>
             <p>Fee payments can be made in installments per term</p>
           </div>
           <div className="flex items-start space-x-3">
-            <span className="text-maroon mt-1">•</span>
+            <i className="fas fa-circle text-maroon mt-1 text-xs"></i>
             <p>All fees are payable before the beginning of each term</p>
           </div>
           <div className="flex items-start space-x-3">
-            <span className="text-maroon mt-1">•</span>
+            <i className="fas fa-circle text-maroon mt-1 text-xs"></i>
             <p>Stationery, uniform, and KNEC registration are exclusive</p>
           </div>
         </div>

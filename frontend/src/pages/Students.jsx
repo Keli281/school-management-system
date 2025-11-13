@@ -154,14 +154,14 @@ const Students = () => {
     <div className="grid grid-cols-2 gap-4">
       <div className="text-center">
         <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-          <span className="text-blue-600 text-2xl">👦</span>
+          <i className="fas fa-male text-blue-600 text-2xl"></i>
         </div>
         <p className="text-2xl font-bold text-blue-600">{students.filter(s => s.gender === 'Male').length}</p>
         <p className="text-sm text-gray-600">Male Students</p>
       </div>
       <div className="text-center">
         <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-2">
-          <span className="text-pink-600 text-2xl">👧</span>
+          <i className="fas fa-female text-pink-600 text-2xl"></i>
         </div>
         <p className="text-2xl font-bold text-pink-600">{students.filter(s => s.gender === 'Female').length}</p>
         <p className="text-sm text-gray-600">Female Students</p>
@@ -422,7 +422,7 @@ const Students = () => {
         
         {filteredStudents.length === 0 && (
           <div className="text-center py-12 text-gray-500">
-            <div className="text-6xl mb-4">👨‍🎓</div>
+            <i className="fas fa-user-graduate text-gray-300 text-6xl mb-4"></i>
             <p className="text-lg mb-2">No students found</p>
             <p className="text-sm">Try adjusting your search terms</p>
           </div>

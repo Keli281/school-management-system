@@ -99,7 +99,7 @@ const Dashboard = () => {
               <p className="text-4xl font-bold text-blue-600 mt-2">{stats.totalStudents}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-blue-600 text-xl">👨‍🎓</span>
+              <i className="fas fa-user-graduate text-blue-600 text-xl"></i>
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-3">Enrolled students for {currentYear}</p>
@@ -112,7 +112,7 @@ const Dashboard = () => {
               <p className="text-4xl font-bold text-green-600 mt-2">KSh {stats.totalFees.toLocaleString()}</p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <span className="text-green-600 text-xl">💰</span>
+              <i className="fas fa-money-bill-wave text-green-600 text-xl"></i>
             </div>
           </div>
           <p className="text-sm text-gray-500 mt-3">Total revenue collected</p>
@@ -125,7 +125,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="border-2 border-dashed border-gold rounded-lg p-6 text-center hover:bg-gold hover:bg-opacity-10 transition-all duration-300 transform hover:scale-[1.02]">
             <div className="w-16 h-16 bg-maroon rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-white text-2xl">📝</span>
+              <i className="fas fa-file-alt text-white text-2xl"></i>
             </div>
             <h4 className="text-lg font-semibold text-maroon mb-2">Admission Form</h4>
             <p className="text-gray-600 text-sm mb-4">Download our student admission application form</p>
@@ -140,7 +140,7 @@ const Dashboard = () => {
 
           <div className="border-2 border-dashed border-maroon rounded-lg p-6 text-center hover:bg-maroon hover:bg-opacity-5 transition-all duration-300 transform hover:scale-[1.02]">
             <div className="w-16 h-16 bg-gold rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-maroon text-2xl">👕</span>
+              <i className="fas fa-tshirt text-maroon text-2xl"></i>
             </div>
             <h4 className="text-lg font-semibold text-maroon mb-2">Uniform Price List</h4>
             <p className="text-gray-600 text-sm mb-4">Complete school uniform and requirements pricing</p>
@@ -161,7 +161,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
           <div className="transform hover:scale-105 transition-transform duration-300">
             <div className="w-12 h-12 bg-maroon rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-white text-xl">📍</span>
+              <i className="fas fa-map-marker-alt text-white text-xl"></i>
             </div>
             <h4 className="font-semibold text-maroon mb-2">Location</h4>
             <p className="text-sm text-gray-600">
@@ -172,7 +172,7 @@ const Dashboard = () => {
 
           <div className="transform hover:scale-105 transition-transform duration-300">
             <div className="w-12 h-12 bg-maroon rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-white text-xl">📞</span>
+              <i className="fas fa-phone-alt text-white text-xl"></i>
             </div>
             <h4 className="font-semibold text-maroon mb-2">Phone Numbers</h4>
             <p className="text-sm text-gray-600">
@@ -183,7 +183,7 @@ const Dashboard = () => {
 
           <div className="transform hover:scale-105 transition-transform duration-300">
             <div className="w-12 h-12 bg-maroon rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-white text-xl">✉️</span>
+              <i className="fas fa-envelope text-white text-xl"></i>
             </div>
             <h4 className="font-semibold text-maroon mb-2">Email</h4>
             <p className="text-sm text-gray-600">
@@ -193,7 +193,7 @@ const Dashboard = () => {
 
           <div className="transform hover:scale-105 transition-transform duration-300">
             <div className="w-12 h-12 bg-maroon rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-white text-xl">🕒</span>
+              <i className="fas fa-clock text-white text-xl"></i>
             </div>
             <h4 className="font-semibold text-maroon mb-2">Operating Hours</h4>
             <p className="text-sm text-gray-600">

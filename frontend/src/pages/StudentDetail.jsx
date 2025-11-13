@@ -121,7 +121,7 @@ const StudentDetail = () => {
       {/* Student Information Card */}
       <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-maroon">
         <h2 className="text-2xl font-bold text-maroon mb-6 flex items-center">
-          <span className="w-8 h-8 bg-maroon rounded-full mr-3 flex items-center justify-center text-white text-sm">👤</span>
+          <i className="fas fa-user-circle text-maroon mr-3 text-2xl"></i>
           Student Information
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -172,7 +172,7 @@ const StudentDetail = () => {
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-maroon flex items-center">
-            <span className="w-8 h-8 bg-gold rounded-full mr-3 flex items-center justify-center text-maroon text-sm">💰</span>
+            <i className="fas fa-money-bill-wave text-gold mr-3 text-2xl"></i>
             Fee Payment History
           </h2>
           <div className="text-right">
@@ -185,7 +185,7 @@ const StudentDetail = () => {
           Object.keys(paymentsByYear).sort().reverse().map(year => (
             <div key={year} className="mb-8">
               <h3 className="text-lg font-semibold text-maroon mb-4 flex items-center">
-                <span className="w-6 h-6 bg-maroon rounded-full mr-2 flex items-center justify-center text-white text-xs">{year}</span>
+                <i className="fas fa-calendar-alt text-maroon mr-2 text-sm"></i>
                 Academic Year {year}
               </h3>
               <div className="overflow-x-auto">
@@ -228,7 +228,7 @@ const StudentDetail = () => {
           ))
         ) : (
           <div className="text-center py-12 text-gray-500">
-            <div className="text-6xl mb-4">💸</div>
+            <i className="fas fa-money-bill-wave text-gray-300 text-6xl mb-4"></i>
             <p className="text-lg mb-2">No fee payments recorded yet</p>
             <p className="text-sm">Record the first payment for this student</p>
           </div>
@@ -245,7 +245,7 @@ const StudentDetail = () => {
             className="bg-white rounded-xl p-6 text-center cursor-pointer transform hover:scale-105 transition-all duration-300 hover:shadow-2xl"
           >
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-green-600 text-2xl">💰</span>
+              <i className="fas fa-money-bill-wave text-green-600 text-2xl"></i>
             </div>
             <h3 className="text-lg font-semibold text-gray-800 mb-2">Record Payment</h3>
             <p className="text-gray-600 text-sm mb-4">Add new fee payment for this student</p>
@@ -260,7 +260,7 @@ const StudentDetail = () => {
             className="bg-white rounded-xl p-6 text-center cursor-pointer transform hover:scale-105 transition-all duration-300 hover:shadow-2xl"
           >
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-blue-600 text-2xl">✏️</span>
+              <i className="fas fa-edit text-blue-600 text-2xl"></i>
             </div>
             <h3 className="text-lg font-semibold text-gray-800 mb-2">Edit Student</h3>
             <p className="text-gray-600 text-sm mb-4">Update student information and details</p>
@@ -282,7 +282,7 @@ const StudentDetail = () => {
               {refreshing ? (
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
               ) : (
-                <span className="text-purple-600 text-2xl">🔄</span>
+                <i className="fas fa-sync-alt text-purple-600 text-2xl"></i>
               )}
             </div>
             <h3 className={`text-lg font-semibold mb-2 ${
