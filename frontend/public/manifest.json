@@ -23,7 +23,7 @@
   ],
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#2563eb",
+  "theme_color": "#800000",
   "background_color": "#ffffff",
   "orientation": "portrait-primary",
   "categories": ["education", "productivity"],
