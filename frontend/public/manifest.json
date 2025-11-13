@@ -1,0 +1,31 @@
+{
+  "short_name": "Awinja School",
+  "name": "Awinja Education Centre",
+  "description": "Complete school management platform for students, teachers, and administration",
+  "icons": [
+    {
+      "src": "/media/favicon-logo.png",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/media/logo.png",
+      "type": "image/png", 
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/media/logo.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#2563eb",
+  "background_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "categories": ["education", "productivity"],
+  "lang": "en-US"
+}
