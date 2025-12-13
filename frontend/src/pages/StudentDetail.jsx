@@ -60,7 +60,7 @@ const StudentDetail = () => {
 
   // Calculate totals
   const totalPaid = payments.reduce((sum, payment) => sum + (payment.amountPaid || 0), 0);
-  const currentBalance = payments.length > 0 ? payments[payments.length - 1]?.balance || 0 : 0;
+  const currentBalance = payments.length > 0 ? (payments[payments.length - 1]?.balance || 0) : 0;
 
   // Group payments by academic year
   const paymentsByYear = payments.reduce((acc, payment) => {

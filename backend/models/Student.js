@@ -17,7 +17,7 @@ const studentSchema = new mongoose.Schema({
   grade: {
     type: String,
     required: true,
-    enum: ['Playgroup', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4']
+    enum: ['Day Care', 'Playgroup', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4']
   },
   gender: {
     type: String,
@@ -41,8 +41,7 @@ const studentSchema = new mongoose.Schema({
     default: true
   }
 }, {
-  timestamps: true // This automatically adds createdAt and updatedAt
+  timestamps: true
 });
 
-// This will be our collection name in MongoDB
 module.exports = mongoose.model('Student', studentSchema);

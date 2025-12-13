@@ -6,45 +6,26 @@ const Student = require('../models/Student');
 const { auth } = require('../middleware/authMiddleware');
 
 // === FEE STRUCTURE ROUTES ===
-
-// GET all fee structures (protected)
 router.get('/structure', auth, async (req, res) => {
   try {
     const structures = await FeeStructure.find().sort({ academicYear: -1, grade: 1 });
-    res.json({
-      success: true,
-      structures: structures
-    });
+    res.json({ success: true, structures: structures });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching fee structures',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Error fetching fee structures', error: error.message });
   }
 });
 
 // === FEE PAYMENT ROUTES ===
-
-// GET all fee payments (protected)
 router.get('/payments', auth, async (req, res) => {
   try {
     const payments = await FeePayment.find().sort({ datePaid: -1 });
-    res.json({
-      success: true,
-      count: payments.length,
-      payments: payments
-    });
+    res.json({ success: true, count: payments.length, payments: payments });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching fee payments',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Error fetching fee payments', error: error.message });
   }
 });
 
-// GET fee payments for a specific student (protected)
+// GET fee payments for a specific student
 router.get('/payments/student/:admissionNumber', auth, async (req, res) => {
   try {
     const payments = await FeePayment.find({ 
@@ -62,196 +43,238 @@ router.get('/payments/student/:admissionNumber', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching student fee payments',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Error fetching student fee payments', error: error.message });
   }
 });
 
-// POST - Record a new fee payment (protected)
-router.post('/payments', auth, async (req, res) => {
+// IMPROVED BALANCE CALCULATION - CORRECT CUMULATIVE LOGIC
+const calculateCurrentBalance = async (studentId, term, academicYear) => {
   try {
-    console.log('🎯 STEP 1: Received payment data from frontend:', req.body);
-
-    // Get student details
-    const student = await Student.findById(req.body.studentId);
+    // Get student and fee structure
+    const student = await Student.findById(studentId);
     if (!student) {
-      return res.status(404).json({
-        success: false,
-        message: 'Student not found'
-      });
+      throw new Error('Student not found');
     }
 
-    console.log('🎯 STEP 2: Student found - Grade:', student.grade);
-
-    // Use the academicYear from request body
-    const academicYear = req.body.academicYear;
-    console.log('🎯 STEP 3: Academic Year from frontend:', academicYear);
-    
-    if (!academicYear) {
-      return res.status(400).json({
-        success: false,
-        message: 'Academic year is required'
-      });
-    }
-
-    // Get fee structure for student's grade and academic year
-    console.log('🎯 STEP 4: Looking for fee structure - Grade:', student.grade, 'Year:', academicYear);
-    
     const feeStructure = await FeeStructure.findOne({ 
-      grade: student.grade,
-      academicYear: academicYear
+      grade: student.grade, 
+      academicYear: academicYear 
     });
     
-    console.log('🎯 STEP 5: Fee structure found:', feeStructure);
-    
     if (!feeStructure) {
-      console.log('❌ ERROR: No fee structure found for:', { grade: student.grade, year: academicYear });
-      
-      // Show all available fee structures for debugging
-      const allStructures = await FeeStructure.find({ grade: student.grade });
-      console.log('📋 Available fee structures for this grade:', allStructures);
-      
-      return res.status(404).json({
-        success: false,
-        message: `Fee structure not found for grade: ${student.grade} and academic year: ${academicYear}. Available years: ${allStructures.map(s => s.academicYear).join(', ')}`
-      });
+      console.log(`⚠️ No fee structure found for ${student.grade} in ${academicYear}`);
+      return 0;
     }
 
-    // Calculate term total and balance
-    const termNumber = req.body.term.split(' ')[1]; // Extract "1" from "Term 1"
-    const termAmount = feeStructure[`term${termNumber}Amount`];
-    
-    console.log('🎯 STEP 6: Calculation details:');
-    console.log('   - Term:', req.body.term);
-    console.log('   - Term Number:', termNumber);
-    console.log('   - Term Amount from DB:', termAmount);
-    console.log('   - Amount Paid:', req.body.amountPaid);
-    
-    const balance = termAmount - req.body.amountPaid;
-    console.log('   - Balance Calculated:', balance);
+    const termNumber = term.split(' ')[1];
+    const termTotal = feeStructure[`term${termNumber}Amount`];
 
-    // Create payment record with calculated balance
+    if (!termTotal || termTotal <= 0) {
+      console.log(`⚠️ Term fee is 0 or not found for ${term} ${academicYear}`);
+      return 0;
+    }
+
+    // Get ALL payments for this student in this term/year
+    const payments = await FeePayment.find({
+      studentId: studentId,
+      term: term,
+      academicYear: academicYear
+    });
+
+    const totalPaid = payments.reduce((sum, payment) => sum + payment.amountPaid, 0);
+    const balance = termTotal - totalPaid;
+    
+    console.log(`💰 CALCULATION: Term Total = ${termTotal}, Total Paid = ${totalPaid}, Balance = ${balance}`);
+    return Math.max(balance, 0); // Ensure balance is never negative
+  } catch (error) {
+    console.error('❌ Error calculating balance:', error);
+    return 0;
+  }
+};
+
+// POST - Record a new fee payment (WITH CORRECT BALANCE CALCULATION)
+router.post('/payments', auth, async (req, res) => {
+  try {
+    const student = await Student.findById(req.body.studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    if (!req.body.academicYear) {
+      return res.status(400).json({ success: false, message: 'Academic year required' });
+    }
+
+    // Calculate CURRENT balance BEFORE new payment
+    const currentBalance = await calculateCurrentBalance(
+      req.body.studentId, 
+      req.body.term, 
+      req.body.academicYear
+    );
+
+    console.log('💰 FEE CALCULATION DETAILS:');
+    console.log('   Student:', `${student.firstName} ${student.lastName}`);
+    console.log('   Grade:', student.grade);
+    console.log('   Term:', req.body.term);
+    console.log('   Academic Year:', req.body.academicYear);
+    console.log('   CURRENT BALANCE (before payment):', currentBalance);
+    console.log('   NEW PAYMENT AMOUNT:', req.body.amountPaid);
+    
+    const newBalance = currentBalance - req.body.amountPaid;
+    console.log('   NEW BALANCE AFTER PAYMENT:', newBalance);
+
+    // Create payment with balance field
     const paymentData = {
       studentId: req.body.studentId,
       admissionNumber: student.admissionNumber,
       studentName: `${student.firstName} ${student.lastName}`,
       grade: student.grade,
       term: req.body.term,
-      academicYear: academicYear, // This is the KEY - using the selected year
+      academicYear: req.body.academicYear,
       amountPaid: req.body.amountPaid,
-      balance: balance,
+      balance: newBalance, // ✅ This will now be saved to database
       datePaid: req.body.datePaid || new Date()
     };
-
-    console.log('🎯 STEP 7: Saving payment with data:', paymentData);
 
     const payment = new FeePayment(paymentData);
     await payment.save();
     
-    console.log('✅ SUCCESS: Payment saved to database!');
-    console.log('   - Academic Year in saved payment:', payment.academicYear);
-    console.log('   - Balance in saved payment:', payment.balance);
+    console.log('✅ Payment saved with balance:', newBalance);
     
     res.status(201).json({
       success: true,
       message: 'Fee payment recorded successfully!',
       payment: payment,
-      calculation: {
-        termTotal: termAmount,
-        amountPaid: req.body.amountPaid,
-        balance: balance
-      }
+      currentBalance: newBalance
     });
   } catch (error) {
-    console.error('💥 BIG ERROR:', error);
-    res.status(400).json({
-      success: false,
-      message: 'Error recording fee payment',
-      error: error.message
-    });
+    console.error('❌ Payment Error:', error);
+    res.status(400).json({ success: false, message: 'Error recording fee payment', error: error.message });
   }
 });
 
-// PUT - Update a fee payment (protected)
+// PUT - Update a fee payment
 router.put('/payments/:id', auth, async (req, res) => {
   try {
     const payment = await FeePayment.findById(req.params.id);
     if (!payment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Payment not found'
-      });
+      return res.status(404).json({ success: false, message: 'Payment not found' });
     }
 
-    // Get student details for recalculation
-    const student = await Student.findById(req.body.studentId || payment.studentId);
-    const academicYear = req.body.academicYear || payment.academicYear;
-    
-    const feeStructure = await FeeStructure.findOne({ 
-      grade: student.grade,
-      academicYear: academicYear
-    });
-    
-    if (!feeStructure) {
-      return res.status(404).json({
-        success: false,
-        message: `Fee structure not found for grade: ${student.grade} and academic year: ${academicYear}`
-      });
-    }
-    
-    const termNumber = (req.body.term || payment.term).split(' ')[1];
-    const termAmount = feeStructure[`term${termNumber}Amount`];
-    const balance = termAmount - req.body.amountPaid;
-
-    const updatedPayment = await FeePayment.findByIdAndUpdate(
-      req.params.id,
-      {
-        ...req.body,
-        balance: balance,
+    // If amount is being updated, we need to recalculate balances for all subsequent payments
+    if (req.body.amountPaid !== undefined && req.body.amountPaid !== payment.amountPaid) {
+      // First update this payment
+      const updateData = {
         amountPaid: req.body.amountPaid,
-        academicYear: academicYear
-      },
-      { new: true, runValidators: true }
-    );
+        ...(req.body.datePaid && { datePaid: req.body.datePaid })
+      };
 
-    res.json({
-      success: true,
-      message: 'Payment updated successfully!',
-      payment: updatedPayment
-    });
+      const updatedPayment = await FeePayment.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        { new: true, runValidators: true }
+      );
+
+      // Recalculate and update all payments for this student in same term/year
+      const allPayments = await FeePayment.find({
+        studentId: payment.studentId,
+        term: payment.term,
+        academicYear: payment.academicYear
+      }).sort({ datePaid: 1 }); // Sort by date ascending
+
+      const student = await Student.findById(payment.studentId);
+      const feeStructure = await FeeStructure.findOne({
+        grade: student.grade,
+        academicYear: payment.academicYear
+      });
+
+      if (feeStructure) {
+        const termNumber = payment.term.split(' ')[1];
+        const termTotal = feeStructure[`term${termNumber}Amount`];
+        let runningTotalPaid = 0;
+
+        for (const paymentRecord of allPayments) {
+          runningTotalPaid += paymentRecord.amountPaid;
+          const newBalance = termTotal - runningTotalPaid;
+          
+          if (paymentRecord.balance !== newBalance) {
+            paymentRecord.balance = newBalance;
+            await paymentRecord.save();
+          }
+        }
+      }
+
+      res.json({
+        success: true,
+        message: 'Payment updated and balances recalculated successfully!',
+        payment: updatedPayment
+      });
+    } else {
+      // Just update date or other non-amount fields
+      const updateData = {};
+      if (req.body.datePaid) updateData.datePaid = req.body.datePaid;
+
+      const updatedPayment = await FeePayment.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        { new: true, runValidators: true }
+      );
+
+      res.json({
+        success: true,
+        message: 'Payment updated successfully!',
+        payment: updatedPayment
+      });
+    }
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: 'Error updating payment',
-      error: error.message
-    });
+    res.status(400).json({ success: false, message: 'Error updating payment', error: error.message });
   }
 });
 
-// DELETE - Remove a fee payment (protected)
+// DELETE - Remove a fee payment
 router.delete('/payments/:id', auth, async (req, res) => {
   try {
-    const payment = await FeePayment.findByIdAndDelete(req.params.id);
+    const payment = await FeePayment.findById(req.params.id);
     if (!payment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Payment not found'
-      });
+      return res.status(404).json({ success: false, message: 'Payment not found' });
     }
 
-    res.json({
-      success: true,
-      message: 'Payment deleted successfully!'
+    await FeePayment.findByIdAndDelete(req.params.id);
+
+    // After deletion, recalculate balances for remaining payments
+    const allPayments = await FeePayment.find({
+      studentId: payment.studentId,
+      term: payment.term,
+      academicYear: payment.academicYear
+    }).sort({ datePaid: 1 });
+
+    const student = await Student.findById(payment.studentId);
+    const feeStructure = await FeeStructure.findOne({
+      grade: student.grade,
+      academicYear: payment.academicYear
+    });
+
+    if (feeStructure && allPayments.length > 0) {
+      const termNumber = payment.term.split(' ')[1];
+      const termTotal = feeStructure[`term${termNumber}Amount`];
+      let runningTotalPaid = 0;
+
+      for (const paymentRecord of allPayments) {
+        runningTotalPaid += paymentRecord.amountPaid;
+        const newBalance = termTotal - runningTotalPaid;
+        
+        if (paymentRecord.balance !== newBalance) {
+          paymentRecord.balance = newBalance;
+          await paymentRecord.save();
+        }
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Payment deleted and balances recalculated successfully!' 
     });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: 'Error deleting payment',
-      error: error.message
-    });
+    res.status(400).json({ success: false, message: 'Error deleting payment', error: error.message });
   }
 });
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { feesAPI, studentsAPI } from '../services/api';
 
 const Fees = () => {
@@ -8,12 +8,30 @@ const Fees = () => {
   const [loading, setLoading] = useState(true);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false); // NEW: Control dropdown visibility
+  const dropdownRef = useRef(null); // NEW: For closing dropdown when clicking outside
+  
   const [formData, setFormData] = useState({
     studentId: '',
+    studentName: '', // NEW: Store selected student name for display
     term: 'Term 1',
     academicYear: '2026',
-    amountPaid: ''
+    amountPaid: '',
+    datePaid: new Date().toISOString().split('T')[0]
   });
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -26,8 +44,12 @@ const Fees = () => {
         studentsAPI.getAll(),
         feesAPI.getFeeStructures()
       ]);
+      
+      // Filter only active students for dropdown
+      const activeStudents = studentsRes.data.students.filter(student => student.isActive !== false);
+      
       setPayments(paymentsRes.data.payments);
-      setStudents(studentsRes.data.students);
+      setStudents(activeStudents);
       setFeeStructures(structuresRes.data.structures);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -39,16 +61,15 @@ const Fees = () => {
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
     try {
-      console.log('🔄 STEP A: Form submitted with data:', formData);
+      console.log('🔄 Form submitted with data:', formData);
 
       const paymentData = {
         studentId: formData.studentId,
         term: formData.term,
         academicYear: formData.academicYear,
-        amountPaid: Number(formData.amountPaid)
+        amountPaid: Number(formData.amountPaid),
+        datePaid: formData.datePaid
       };
-
-      console.log('🔄 STEP B: Sending to backend:', paymentData);
 
       if (editingPayment) {
         await feesAPI.updatePayment(editingPayment._id, paymentData);
@@ -70,9 +91,11 @@ const Fees = () => {
     setEditingPayment(payment);
     setFormData({
       studentId: payment.studentId,
+      studentName: payment.studentName,
       term: payment.term,
       academicYear: payment.academicYear,
-      amountPaid: payment.amountPaid.toString()
+      amountPaid: payment.amountPaid.toString(),
+      datePaid: new Date(payment.datePaid).toISOString().split('T')[0]
     });
     setShowPaymentForm(true);
   };
@@ -92,12 +115,40 @@ const Fees = () => {
   const resetForm = () => {
     setShowPaymentForm(false);
     setEditingPayment(null);
+    setSearchTerm('');
+    setShowDropdown(false);
     setFormData({ 
-      studentId: '', 
+      studentId: '',
+      studentName: '',
       term: 'Term 1', 
       academicYear: '2026',
-      amountPaid: '' 
+      amountPaid: '',
+      datePaid: new Date().toISOString().split('T')[0]
     });
+  };
+
+  // Filter students based on search term
+  const filteredStudents = searchTerm === '' 
+    ? students 
+    : students.filter(student => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          student.firstName.toLowerCase().includes(searchLower) ||
+          student.lastName.toLowerCase().includes(searchLower) ||
+          student.admissionNumber.toLowerCase().includes(searchLower) ||
+          student.grade.toLowerCase().includes(searchLower)
+        );
+      });
+
+  // Handle student selection
+  const handleSelectStudent = (student) => {
+    setFormData({
+      ...formData,
+      studentId: student._id,
+      studentName: `${student.admissionNumber} - ${student.firstName} ${student.lastName} (${student.grade})`
+    });
+    setShowDropdown(false);
+    setSearchTerm('');
   };
 
   // Calculate total collected
@@ -111,7 +162,7 @@ const Fees = () => {
     return acc;
   }, {});
 
-  const grades = ['Playgroup', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'];
+  const grades = ['Day Care', 'Playgroup', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'];
 
   if (loading) {
     return (
@@ -137,14 +188,14 @@ const Fees = () => {
         </div>
       </div>
 
-      {/* Fees Collected Per Grade - NEW LAYOUT */}
+      {/* Fees Collected Per Grade */}
       <div className="bg-white rounded-xl shadow-lg p-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Fees Collected Per Grade</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4">
           {grades.map(grade => (
             <div key={grade} className="text-center bg-gray-50 rounded-lg p-4 border border-gray-200">
               <p className="text-sm font-medium text-gray-600 mb-2 truncate" title={grade}>
-                {grade.replace('Grade', 'G')}
+                {grade === 'Day Care' ? 'DC' : grade.replace('Grade', 'G')}
               </p>
               <p className="text-lg font-bold text-green-600">
                 KSh {(feesPerGrade[grade] || 0).toLocaleString()}
@@ -175,24 +226,73 @@ const Fees = () => {
             </h2>
             
             <form onSubmit={handleSubmitPayment} className="space-y-4">
-              <div>
+              {/* Custom Searchable Dropdown for Students */}
+              <div ref={dropdownRef} className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Student
+                  Student *
                 </label>
-                <select
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
-                  value={formData.studentId}
-                  onChange={(e) => setFormData({...formData, studentId: e.target.value})}
-                  disabled={editingPayment}
+                
+                {/* Selected Student Display / Input */}
+                <div 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors cursor-pointer bg-white flex justify-between items-center"
+                  onClick={() => !editingPayment && setShowDropdown(!showDropdown)}
                 >
-                  <option value="">Select Student</option>
-                  {students.map(student => (
-                    <option key={student._id} value={student._id}>
-                      {student.admissionNumber} - {student.firstName} {student.lastName}
-                    </option>
-                  ))}
-                </select>
+                  <span className={formData.studentName ? "text-gray-900" : "text-gray-500"}>
+                    {formData.studentName || "Select Student"}
+                  </span>
+                  <svg 
+                    className={`w-5 h-5 text-gray-400 transition-transform ${showDropdown ? 'transform rotate-180' : ''}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+
+                {/* Dropdown Menu */}
+                {showDropdown && !editingPayment && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+                    {/* Search Input inside Dropdown */}
+                    <div className="sticky top-0 bg-white p-2 border-b">
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon"
+                        placeholder="Search students..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        autoFocus
+                      />
+                      <p className="text-xs text-gray-500 mt-1 px-1">
+                        {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''} found
+                      </p>
+                    </div>
+
+                    {/* Student List */}
+                    <div className="py-1">
+                      {filteredStudents.length === 0 ? (
+                        <div className="px-4 py-3 text-gray-500 text-sm">
+                          No students found matching "{searchTerm}"
+                        </div>
+                      ) : (
+                        filteredStudents.map(student => (
+                          <div
+                            key={student._id}
+                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0"
+                            onClick={() => handleSelectStudent(student)}
+                          >
+                            <div className="font-medium text-gray-900">
+                              {student.firstName} {student.lastName}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {student.admissionNumber} • {student.grade}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -225,6 +325,19 @@ const Fees = () => {
                   <option value="Term 2">Term 2</option>
                   <option value="Term 3">Term 3</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Payment Date
+                </label>
+                <input
+                  type="date"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
+                  value={formData.datePaid}
+                  onChange={(e) => setFormData({...formData, datePaid: e.target.value})}
+                />
               </div>
 
               <div>
@@ -274,6 +387,9 @@ const Fees = () => {
                   Student
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">
+                  Grade
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">
                   Year
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">
@@ -299,6 +415,16 @@ const Fees = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {payment.studentName}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      payment.grade.includes('Grade') ? 'bg-blue-100 text-blue-800' :
+                      payment.grade.includes('PP') ? 'bg-green-100 text-green-800' :
+                      payment.grade === 'Day Care' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-purple-100 text-purple-800'
+                    }`}>
+                      {payment.grade}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       payment.academicYear === '2025' ? 'bg-blue-100 text-blue-800' :
@@ -321,7 +447,7 @@ const Fees = () => {
                     KSh {payment.amountPaid.toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
-                    KSh {payment.balance.toLocaleString()}
+                    KSh {(payment.balance || 0).toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">

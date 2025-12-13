@@ -1,19 +1,24 @@
 import axios from 'axios';
 
-// Change from local to deployed backend
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+// Detect if we're in development or production
+const isDevelopment = import.meta.env.DEV;
+
+// Use local backend in development, deployed backend in production
+const API_BASE_URL = isDevelopment 
+  ? 'http://localhost:5000/api'  // Local development
+  : import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'; // Production
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 40000, // Increased timeout to 40 seconds
+  timeout: 40000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
-  // withCredentials removed to avoid CORS credential errors when using localStorage for tokens
 });
 
-console.log('🔗 API Base URL:', API_BASE_URL); // Add this to debug
+console.log('🔗 API Base URL:', API_BASE_URL);
+console.log('🌐 Environment:', isDevelopment ? 'Development' : 'Production');
 
 // Add token to requests automatically
 api.interceptors.request.use(
@@ -50,9 +55,7 @@ export const feesAPI = {
   getPayments: () => api.get('/fees/payments'),
   getStudentPayments: (admissionNumber) => api.get(`/fees/payments/student/${encodeURIComponent(admissionNumber)}`),
   recordPayment: (paymentData) => api.post('/fees/payments', paymentData),
-  getBalance: (admissionNumber) => api.get(`/fees/balance/${encodeURIComponent(admissionNumber)}`),
   getFeeStructures: () => api.get('/fees/structure'),
-  getDashboardSummary: () => api.get('/fees/dashboard/summary'),
   updatePayment: (id, paymentData) => api.put(`/fees/payments/${id}`, paymentData),
   deletePayment: (id) => api.delete(`/fees/payments/${id}`),
 };

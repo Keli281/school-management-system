@@ -25,14 +25,16 @@ const feePaymentSchema = new mongoose.Schema({
   },
   academicYear: {
     type: String,
-    required: true // REMOVED THE DEFAULT VALUE
+    required: true
   },
   amountPaid: {
     type: Number,
     required: true
   },
   balance: {
-    type: Number
+    type: Number,
+    required: true,
+    default: 0
   },
   datePaid: {
     type: Date,
