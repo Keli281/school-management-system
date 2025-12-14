@@ -7,9 +7,14 @@ const Students = () => {
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'inactive'
+  const [statusFilter, setStatusFilter] = useState('all');
   const [showStudentForm, setShowStudentForm] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
+  
+  // NEW: Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  
   const [formData, setFormData] = useState({
     admissionNumber: '',
     firstName: '',
@@ -19,6 +24,13 @@ const Students = () => {
     parentName: '',
     parentPhone: '+254700000000',
     knecCode: '',
+    admissionFee: {
+      paid: false,
+      amount: 0,
+      paymentDate: '',
+      academicYear: '2026'
+    },
+    dateOfAdmission: new Date().toISOString().split('T')[0],
     isActive: true
   });
 
@@ -28,18 +40,15 @@ const Students = () => {
     fetchStudents();
   }, []);
 
-  // Filter students when search term or status filter changes
   useEffect(() => {
     let result = students;
     
-    // Apply status filter
     if (statusFilter === 'active') {
       result = result.filter(student => student.isActive !== false);
     } else if (statusFilter === 'inactive') {
       result = result.filter(student => student.isActive === false);
     }
     
-    // Apply search filter
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       result = result.filter(student =>
@@ -51,13 +60,14 @@ const Students = () => {
     }
     
     setFilteredStudents(result);
+    setCurrentPage(1); // Reset to first page when filters change
   }, [students, searchTerm, statusFilter]);
 
   const fetchStudents = async () => {
     try {
       const response = await studentsAPI.getAll();
       setStudents(response.data.students);
-      setFilteredStudents(response.data.students); // Initialize filtered list
+      setFilteredStudents(response.data.students);
     } catch (error) {
       console.error('Error fetching students:', error);
     } finally {
@@ -94,7 +104,16 @@ const Students = () => {
       parentName: student.parentName,
       parentPhone: student.parentPhone,
       knecCode: student.knecCode || '',
-      isActive: student.isActive !== false // Ensure boolean
+      admissionFee: student.admissionFee || {
+        paid: false,
+        amount: 0,
+        paymentDate: '',
+        academicYear: '2026'
+      },
+      dateOfAdmission: student.dateOfAdmission ? 
+        new Date(student.dateOfAdmission).toISOString().split('T')[0] : 
+        new Date().toISOString().split('T')[0],
+      isActive: student.isActive !== false
     });
     setShowStudentForm(true);
   };
@@ -140,13 +159,20 @@ const Students = () => {
       parentName: '',
       parentPhone: '+254700000000',
       knecCode: '',
+      admissionFee: {
+        paid: false,
+        amount: 0,
+        paymentDate: '',
+        academicYear: '2026'
+      },
+      dateOfAdmission: new Date().toISOString().split('T')[0],
       isActive: true
     });
   };
 
   const generateAdmissionNumber = () => {
     const lastStudent = students[students.length - 1];
-    const admissionYear = '2026'; // Default to 2026 for Day Care
+    const admissionYear = '2026';
     
     if (lastStudent && lastStudent.admissionNumber) {
       const match = lastStudent.admissionNumber.match(/AEC\/(\d+)\/(\d{4})/);
@@ -155,10 +181,8 @@ const Students = () => {
         const lastYear = match[2];
         
         if (lastYear === admissionYear) {
-          // Increment within same year
           return `AEC/${String(lastNumber + 1).padStart(3, '0')}/${admissionYear}`;
         } else {
-          // Start from 001 for new year
           return `AEC/001/${admissionYear}`;
         }
       }
@@ -166,7 +190,17 @@ const Students = () => {
     return `AEC/001/${admissionYear}`;
   };
 
-  // Calculate students per grade (only active)
+  // NEW: Pagination calculations
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentStudents = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+
+  // NEW: Handle page change
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
   const activeStudents = students.filter(s => s.isActive !== false);
   const gradeCounts = activeStudents.reduce((acc, student) => {
     acc[student.grade] = (acc[student.grade] || 0) + 1;
@@ -175,7 +209,6 @@ const Students = () => {
 
   const grades = ['Day Care', 'Playgroup', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'];
 
-  // Statistics
   const activeCount = students.filter(s => s.isActive !== false).length;
   const inactiveCount = students.filter(s => s.isActive === false).length;
 
@@ -189,7 +222,6 @@ const Students = () => {
 
   return (
     <div className="space-y-6 pb-8">
-      {/* Header Section */}
       <div className="bg-gradient-to-r from-maroon to-dark-maroon rounded-2xl shadow-xl p-6 text-white">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div>
@@ -203,9 +235,7 @@ const Students = () => {
         </div>
       </div>
 
-      {/* Quick Stats - IMPROVED WITH STATUS */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Active Students Card */}
         <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Active Students</h3>
           <div className="text-center">
@@ -214,7 +244,6 @@ const Students = () => {
           </div>
         </div>
 
-        {/* Inactive Students Card */}
         <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-gray-400">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Inactive Students</h3>
           <div className="text-center">
@@ -223,7 +252,6 @@ const Students = () => {
           </div>
         </div>
 
-        {/* Gender Distribution Card */}
         <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Gender Distribution</h3>
           <div className="grid grid-cols-2 gap-4">
@@ -244,7 +272,6 @@ const Students = () => {
           </div>
         </div>
 
-        {/* Students by Grade Card */}
         <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Active by Grade</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -260,13 +287,11 @@ const Students = () => {
         </div>
       </div>
 
-      {/* Action Bar with Filters */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <h2 className="text-xl font-semibold text-gray-800">Student Records</h2>
           
           <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4">
-            {/* Status Filter */}
             <div className="flex items-center space-x-2">
               <span className="text-sm text-gray-600">Status:</span>
               <select
@@ -280,7 +305,6 @@ const Students = () => {
               </select>
             </div>
 
-            {/* Add Student Button */}
             <button 
               className="bg-maroon text-white px-4 py-2 rounded-lg hover:bg-dark-maroon transition-colors flex items-center"
               onClick={() => {
@@ -297,7 +321,6 @@ const Students = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
       <div className="bg-white rounded-lg shadow p-4">
         <input
           type="text"
@@ -308,7 +331,6 @@ const Students = () => {
         />
       </div>
 
-      {/* Student Form Modal */}
       {showStudentForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -384,7 +406,6 @@ const Students = () => {
                 </select>
               </div>
 
-              {/* Status Field (only for editing) */}
               {editingStudent && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
@@ -434,6 +455,114 @@ const Students = () => {
                 />
               </div>
 
+              {(() => {
+                const admissionYear = formData.admissionNumber.match(/\/(\d{4})$/);
+                const is2026OrLater = admissionYear && parseInt(admissionYear[1]) >= 2026;
+                
+                if (!is2026OrLater && !editingStudent) {
+                  return null;
+                }
+                
+                return (
+                  <>
+                    <div className="md:col-span-2 border-t pt-4 mt-2">
+                      <h3 className="text-lg font-medium text-maroon mb-3">Admission Fee Status {!is2026OrLater && '(Historical)'}</h3>
+                      
+                      {!is2026OrLater && editingStudent && (
+                        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Note:</span> Admission fee tracking is only applicable for students admitted in 2026 and later.
+                            This student was admitted in {admissionYear ? admissionYear[1] : 'previous year'}.
+                          </p>
+                        </div>
+                      )}
+                      
+                      {is2026OrLater && (
+                        <>
+                          <div className="mb-4">
+                            <label className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 text-maroon border-gray-300 rounded focus:ring-maroon focus:ring-2"
+                                checked={formData.admissionFee.paid}
+                                onChange={(e) => setFormData({
+                                  ...formData,
+                                  admissionFee: {
+                                    ...formData.admissionFee,
+                                    paid: e.target.checked,
+                                    paymentDate: e.target.checked ? new Date().toISOString().split('T')[0] : ''
+                                  }
+                                })}
+                              />
+                              <span className="text-sm font-medium text-gray-700">
+                                Admission Fee Paid
+                              </span>
+                            </label>
+                            <p className="text-xs text-gray-500 mt-1 ml-7">
+                              Check if admission fee has been paid (Only applicable for 2026+ admissions)
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Admission Fee Amount (KSh)
+                              </label>
+                              <input
+                                type="number"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
+                                value={formData.admissionFee.amount}
+                                onChange={(e) => setFormData({
+                                  ...formData,
+                                  admissionFee: {
+                                    ...formData.admissionFee,
+                                    amount: parseInt(e.target.value) || 0
+                                  }
+                                })}
+                                placeholder="5000"
+                              />
+                            </div>
+
+                            {formData.admissionFee.paid && (
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Payment Date
+                                </label>
+                                <input
+                                  type="date"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
+                                  value={formData.admissionFee.paymentDate || new Date().toISOString().split('T')[0]}
+                                  onChange={(e) => setFormData({
+                                    ...formData,
+                                    admissionFee: {
+                                      ...formData.admissionFee,
+                                      paymentDate: e.target.value
+                                    }
+                                  })}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Date of Admission *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
+                        value={formData.dateOfAdmission}
+                        onChange={(e) => setFormData({...formData, dateOfAdmission: e.target.value})}
+                      />
+                    </div>
+                  </>
+                );
+              })()}
+
               <div className="md:col-span-2 flex space-x-3 pt-4">
                 <button
                   type="submit"
@@ -454,7 +583,6 @@ const Students = () => {
         </div>
       )}
 
-      {/* Students Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full">
@@ -464,13 +592,14 @@ const Students = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Student Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Grade</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Gender</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Admission Fee</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Parent Phone</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredStudents.map((student) => (
+              {currentStudents.map((student) => (
                 <tr 
                   key={student._id} 
                   className="hover:bg-gray-50 cursor-pointer transition-colors"
@@ -494,6 +623,38 @@ const Students = () => {
                     }`}>
                       {student.gender}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {(() => {
+                      const admissionYear = student.admissionNumber.match(/\/(\d{4})$/);
+                      const is2026OrLater = admissionYear && parseInt(admissionYear[1]) >= 2026;
+                      
+                      if (!is2026OrLater) {
+                        return (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs" title="Not applicable for pre-2026 students">
+                            N/A
+                          </span>
+                        );
+                      }
+                      
+                      const fee = student.admissionFee || { paid: false, amount: 0 };
+                      
+                      if (fee.paid) {
+                        return (
+                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs flex items-center">
+                            <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                            Paid: KSh {fee.amount?.toLocaleString() || '0'}
+                          </span>
+                        );
+                      } else {
+                        return (
+                          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs flex items-center">
+                            <span className="w-2 h-2 bg-yellow-500 rounded-full mr-1"></span>
+                            Pending
+                          </span>
+                        );
+                      }
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <button
@@ -539,20 +700,102 @@ const Students = () => {
           </table>
         </div>
         
-        {filteredStudents.length === 0 && (
+        {filteredStudents.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <i className="fas fa-user-graduate text-gray-300 text-6xl mb-4"></i>
             <p className="text-lg mb-2">No students found</p>
             <p className="text-sm">Try adjusting your search terms or filters</p>
           </div>
+        ) : (
+          // NEW: Pagination Controls (Same as Fees.jsx)
+          <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+              <div className="text-sm text-gray-700">
+                Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{' '}
+                <span className="font-medium">
+                  {Math.min(indexOfLastItem, filteredStudents.length)}
+                </span>{' '}
+                of <span className="font-medium">{filteredStudents.length}</span> students
+              </div>
+              
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-700">Students per page:</span>
+                  <select
+                    className="px-2 py-1 border border-gray-300 rounded text-sm"
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                  </select>
+                </div>
+                
+                <div className="flex space-x-1">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-1 rounded-md text-sm ${
+                      currentPage === 1
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
+                  >
+                    Previous
+                  </button>
+                  
+                  {[...Array(totalPages)].map((_, index) => {
+                    const pageNumber = index + 1;
+                    if (
+                      pageNumber === 1 ||
+                      pageNumber === totalPages ||
+                      (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={pageNumber}
+                          onClick={() => handlePageChange(pageNumber)}
+                          className={`px-3 py-1 rounded-md text-sm ${
+                            currentPage === pageNumber
+                              ? 'bg-maroon text-white'
+                              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                          }`}
+                        >
+                          {pageNumber}
+                        </button>
+                      );
+                    }
+                    return null;
+                  })}
+                  
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className={`px-3 py-1 rounded-md text-sm ${
+                      currentPage === totalPages
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Summary Footer */}
+      {/* Updated Summary Footer with Pagination Info */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-600">
-            Showing {filteredStudents.length} of {students.length} students • 
+            Showing {currentStudents.length} of {filteredStudents.length} students (Page {currentPage} of {totalPages}) • 
             <span className="ml-2">
               <span className="text-green-600 font-medium">{activeCount} active</span>
               {inactiveCount > 0 && <span className="ml-2 text-gray-600">{inactiveCount} inactive</span>}

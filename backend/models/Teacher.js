@@ -34,7 +34,6 @@ const teacherSchema = new mongoose.Schema({
     default: [],
     validate: {
       validator: function(grades) {
-        // Validate each grade in the array
         const validGrades = ['Day Care', 'Playgroup', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'];
         return grades.every(grade => validGrades.includes(grade));
       },
@@ -47,6 +46,15 @@ const teacherSchema = new mongoose.Schema({
   }
 }, {
   timestamps: true
+});
+
+// Remove any old gradeAssigned field if it exists
+teacherSchema.pre('save', function(next) {
+  // Remove old field if it somehow got added
+  if (this.gradeAssigned !== undefined) {
+    this.gradeAssigned = undefined;
+  }
+  next();
 });
 
 module.exports = mongoose.model('Teacher', teacherSchema);

@@ -1,6 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { feesAPI, studentsAPI } from '../services/api';
 
+// Simple Toast Component for Fees page only
+const Toast = ({ message, type = 'success', onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+
+  return (
+    <div className={`fixed top-4 right-4 z-50 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg border transform transition-all duration-300 animate-slide-in`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          {type === 'success' ? '✅' : '❌'}
+          <span className="ml-2 font-medium">{message}</span>
+        </div>
+        <button
+          onClick={onClose}
+          className="ml-4 text-white hover:text-gray-200"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const Fees = () => {
   const [payments, setPayments] = useState([]);
   const [students, setStudents] = useState([]);
@@ -9,19 +38,39 @@ const Fees = () => {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false); // NEW: Control dropdown visibility
-  const dropdownRef = useRef(null); // NEW: For closing dropdown when clicking outside
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+  
+  // NEW: Toast state
+  const [toast, setToast] = useState(null);
+  
+  // NEW: Filter states
+  const [filters, setFilters] = useState({
+    academicYear: '',
+    term: '',
+    grade: '',
+    dateFrom: '',
+    dateTo: ''
+  });
+  
+  // NEW: Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
   const [formData, setFormData] = useState({
     studentId: '',
-    studentName: '', // NEW: Store selected student name for display
+    studentName: '',
     term: 'Term 1',
     academicYear: '2026',
     amountPaid: '',
     datePaid: new Date().toISOString().split('T')[0]
   });
 
-  // Close dropdown when clicking outside
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -45,7 +94,6 @@ const Fees = () => {
         feesAPI.getFeeStructures()
       ]);
       
-      // Filter only active students for dropdown
       const activeStudents = studentsRes.data.students.filter(student => student.isActive !== false);
       
       setPayments(paymentsRes.data.payments);
@@ -53,6 +101,7 @@ const Fees = () => {
       setFeeStructures(structuresRes.data.structures);
     } catch (error) {
       console.error('Error fetching data:', error);
+      showToast('Error loading data', 'error');
     } finally {
       setLoading(false);
     }
@@ -73,17 +122,17 @@ const Fees = () => {
 
       if (editingPayment) {
         await feesAPI.updatePayment(editingPayment._id, paymentData);
-        alert('Payment updated successfully!');
+        showToast('Payment updated successfully!');
       } else {
         await feesAPI.recordPayment(paymentData);
-        alert('Payment recorded successfully!');
+        showToast('Payment recorded successfully!');
       }
       
       resetForm();
       fetchData();
     } catch (error) {
       console.error('❌ Frontend Error:', error);
-      alert('Error: ' + (error.response?.data?.message || error.message));
+      showToast('Error: ' + (error.response?.data?.message || error.message), 'error');
     }
   };
 
@@ -104,10 +153,10 @@ const Fees = () => {
     if (window.confirm('Are you sure you want to delete this payment?')) {
       try {
         await feesAPI.deletePayment(paymentId);
-        alert('Payment deleted successfully!');
+        showToast('Payment deleted successfully!');
         fetchData();
       } catch (error) {
-        alert('Error deleting payment: ' + (error.response?.data?.message || error.message));
+        showToast('Error deleting payment: ' + (error.response?.data?.message || error.message), 'error');
       }
     }
   };
@@ -127,7 +176,7 @@ const Fees = () => {
     });
   };
 
-  // Filter students based on search term
+  // Filter students for dropdown
   const filteredStudents = searchTerm === '' 
     ? students 
     : students.filter(student => {
@@ -151,14 +200,69 @@ const Fees = () => {
     setSearchTerm('');
   };
 
-  // Calculate total collected
-  const totalCollected = payments.reduce((sum, payment) => sum + payment.amountPaid, 0);
+  // NEW: Apply filters to payments
+  const filteredPayments = payments.filter(payment => {
+    // Search filter
+    if (searchTerm && !payment.studentName.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false;
+    }
+    
+    // Academic year filter
+    if (filters.academicYear && payment.academicYear !== filters.academicYear) {
+      return false;
+    }
+    
+    // Term filter
+    if (filters.term && payment.term !== filters.term) {
+      return false;
+    }
+    
+    // Grade filter
+    if (filters.grade && payment.grade !== filters.grade) {
+      return false;
+    }
+    
+    // Date range filter
+    if (filters.dateFrom && new Date(payment.datePaid) < new Date(filters.dateFrom)) {
+      return false;
+    }
+    
+    if (filters.dateTo && new Date(payment.datePaid) > new Date(filters.dateTo)) {
+      return false;
+    }
+    
+    return true;
+  });
 
-  // Calculate fees collected per grade
-  const feesPerGrade = students.reduce((acc, student) => {
-    const gradePayments = payments.filter(p => p.studentId === student._id);
-    const gradeTotal = gradePayments.reduce((sum, payment) => sum + payment.amountPaid, 0);
-    acc[student.grade] = (acc[student.grade] || 0) + gradeTotal;
+  // NEW: Pagination calculations
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentPayments = filteredPayments.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
+
+  // NEW: Handle page change
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  // NEW: Clear all filters
+  const clearFilters = () => {
+    setFilters({
+      academicYear: '',
+      term: '',
+      grade: '',
+      dateFrom: '',
+      dateTo: ''
+    });
+    setCurrentPage(1);
+  };
+
+  // Calculate total collected from filtered payments
+  const totalCollected = filteredPayments.reduce((sum, payment) => sum + payment.amountPaid, 0);
+
+  // Calculate fees collected per grade from filtered payments
+  const feesPerGrade = filteredPayments.reduce((acc, payment) => {
+    acc[payment.grade] = (acc[payment.grade] || 0) + payment.amountPaid;
     return acc;
   }, {});
 
@@ -174,6 +278,9 @@ const Fees = () => {
 
   return (
     <div className="space-y-6 pb-8">
+      {/* Toast Notification */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
       {/* Header with Stats */}
       <div className="bg-gradient-to-r from-maroon to-dark-maroon rounded-2xl shadow-xl p-6">
         <div className="flex flex-col md:flex-row justify-between items-center">
@@ -183,14 +290,17 @@ const Fees = () => {
           </div>
           <div className="mt-4 md:mt-0 text-center md:text-right">
             <p className="text-2xl font-bold text-black">KSh {totalCollected.toLocaleString()}</p>
-            <p className="text-gold font-medium">Total Collected</p>
+            <p className="text-gold font-medium">Total Collected (Filtered)</p>
+            <p className="text-sm text-gold/80">
+              Showing {filteredPayments.length} of {payments.length} payments
+            </p>
           </div>
         </div>
       </div>
 
       {/* Fees Collected Per Grade */}
       <div className="bg-white rounded-xl shadow-lg p-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Fees Collected Per Grade</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Fees Collected Per Grade (Filtered)</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4">
           {grades.map(grade => (
             <div key={grade} className="text-center bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -200,24 +310,157 @@ const Fees = () => {
               <p className="text-lg font-bold text-green-600">
                 KSh {(feesPerGrade[grade] || 0).toLocaleString()}
               </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {filteredPayments.filter(p => p.grade === grade).length} payments
+              </p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Action Bar */}
-      <div className="flex justify-between items-center bg-white rounded-lg shadow p-4">
-        <h2 className="text-xl font-semibold text-gray-800">Fee Payments</h2>
-        <button 
-          className="bg-maroon text-white px-4 py-2 rounded-lg hover:bg-dark-maroon transition-colors flex items-center"
-          onClick={() => setShowPaymentForm(true)}
-        >
-          <span className="mr-2">+</span>
-          {editingPayment ? 'Update Payment' : 'Record Payment'}
-        </button>
+      {/* NEW: Search and Filter Bar */}
+      <div className="bg-white rounded-lg shadow p-6 space-y-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <h2 className="text-xl font-semibold text-gray-800">Fee Payments</h2>
+          
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button 
+              className="bg-maroon text-white px-4 py-2 rounded-lg hover:bg-dark-maroon transition-colors flex items-center"
+              onClick={() => setShowPaymentForm(true)}
+            >
+              <span className="mr-2">+</span>
+              Record Payment
+            </button>
+            
+            {(filters.academicYear || filters.term || filters.grade || filters.dateFrom || filters.dateTo) && (
+              <button
+                onClick={clearFilters}
+                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Search Input */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="lg:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Search Payments</label>
+            <input
+              type="text"
+              placeholder="Search by student name..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
+              value={filters.academicYear}
+              onChange={(e) => setFilters({...filters, academicYear: e.target.value})}
+            >
+              <option value="">All Years</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+              <option value="2027">2027</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Term</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
+              value={filters.term}
+              onChange={(e) => setFilters({...filters, term: e.target.value})}
+            >
+              <option value="">All Terms</option>
+              <option value="Term 1">Term 1</option>
+              <option value="Term 2">Term 2</option>
+              <option value="Term 3">Term 3</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Grade</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
+              value={filters.grade}
+              onChange={(e) => setFilters({...filters, grade: e.target.value})}
+            >
+              <option value="">All Grades</option>
+              {grades.map(grade => (
+                <option key={grade} value={grade}>{grade}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="lg:col-span-2 grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+              <input
+                type="date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
+                value={filters.dateFrom}
+                onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+              <input
+                type="date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
+                value={filters.dateTo}
+                onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
+              />
+            </div>
+          </div>
+        </div>
+        
+        {/* Filter Summary */}
+        {(filters.academicYear || filters.term || filters.grade || filters.dateFrom || filters.dateTo) && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-medium text-blue-800">Active Filters:</span>
+                <div className="flex flex-wrap gap-2">
+                  {filters.academicYear && (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                      Year: {filters.academicYear}
+                    </span>
+                  )}
+                  {filters.term && (
+                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                      Term: {filters.term}
+                    </span>
+                  )}
+                  {filters.grade && (
+                    <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                      Grade: {filters.grade}
+                    </span>
+                  )}
+                  {filters.dateFrom && filters.dateTo && (
+                    <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                      {filters.dateFrom} to {filters.dateTo}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={clearFilters}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Payment Form Modal */}
+      {/* Payment Form Modal - Same as before */}
       {showPaymentForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
@@ -226,13 +469,12 @@ const Fees = () => {
             </h2>
             
             <form onSubmit={handleSubmitPayment} className="space-y-4">
-              {/* Custom Searchable Dropdown for Students */}
+              {/* Student dropdown - Same as before */}
               <div ref={dropdownRef} className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Student *
                 </label>
                 
-                {/* Selected Student Display / Input */}
                 <div 
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors cursor-pointer bg-white flex justify-between items-center"
                   onClick={() => !editingPayment && setShowDropdown(!showDropdown)}
@@ -250,10 +492,8 @@ const Fees = () => {
                   </svg>
                 </div>
 
-                {/* Dropdown Menu */}
                 {showDropdown && !editingPayment && (
                   <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-y-auto">
-                    {/* Search Input inside Dropdown */}
                     <div className="sticky top-0 bg-white p-2 border-b">
                       <input
                         type="text"
@@ -268,7 +508,6 @@ const Fees = () => {
                       </p>
                     </div>
 
-                    {/* Student List */}
                     <div className="py-1">
                       {filteredStudents.length === 0 ? (
                         <div className="px-4 py-3 text-gray-500 text-sm">
@@ -407,7 +646,7 @@ const Fees = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {payments.map((payment) => (
+              {currentPayments.map((payment) => (
                 <tr key={payment._id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {new Date(payment.datePaid).toLocaleDateString()}
@@ -471,11 +710,94 @@ const Fees = () => {
           </table>
         </div>
         
-        {payments.length === 0 && (
+        {filteredPayments.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <div className="text-6xl mb-4">💰</div>
-            <p className="text-lg mb-2">No fee payments recorded yet</p>
-            <p className="text-sm">Click "Record Payment" to get started</p>
+            <p className="text-lg mb-2">No fee payments found</p>
+            <p className="text-sm">Try adjusting your search terms or filters</p>
+          </div>
+        ) : (
+          // NEW: Pagination Controls
+          <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+              <div className="text-sm text-gray-700">
+                Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{' '}
+                <span className="font-medium">
+                  {Math.min(indexOfLastItem, filteredPayments.length)}
+                </span>{' '}
+                of <span className="font-medium">{filteredPayments.length}</span> results
+              </div>
+              
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-700">Items per page:</span>
+                  <select
+                    className="px-2 py-1 border border-gray-300 rounded text-sm"
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                  </select>
+                </div>
+                
+                <div className="flex space-x-1">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-1 rounded-md text-sm ${
+                      currentPage === 1
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
+                  >
+                    Previous
+                  </button>
+                  
+                  {[...Array(totalPages)].map((_, index) => {
+                    const pageNumber = index + 1;
+                    // Show only first, last, and pages around current
+                    if (
+                      pageNumber === 1 ||
+                      pageNumber === totalPages ||
+                      (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={pageNumber}
+                          onClick={() => handlePageChange(pageNumber)}
+                          className={`px-3 py-1 rounded-md text-sm ${
+                            currentPage === pageNumber
+                              ? 'bg-maroon text-white'
+                              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                          }`}
+                        >
+                          {pageNumber}
+                        </button>
+                      );
+                    }
+                    return null;
+                  })}
+                  
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className={`px-3 py-1 rounded-md text-sm ${
+                      currentPage === totalPages
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

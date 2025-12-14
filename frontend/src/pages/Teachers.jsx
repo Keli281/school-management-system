@@ -6,7 +6,7 @@ const Teachers = () => {
   const [filteredTeachers, setFilteredTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'inactive'
+  const [statusFilter, setStatusFilter] = useState('all');
   const [showTeacherForm, setShowTeacherForm] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState(null);
   const [formData, setFormData] = useState({
@@ -14,8 +14,8 @@ const Teachers = () => {
     lastName: '',
     email: '',
     phone: '',
-    primaryGradeAssigned: 'Day Care', // Changed from gradeAssigned
-    additionalGrades: [], // New field
+    primaryGradeAssigned: 'Day Care',
+    additionalGrades: [],
     isActive: true
   });
 
@@ -41,7 +41,10 @@ const Teachers = () => {
         teacher.firstName.toLowerCase().includes(searchLower) ||
         teacher.lastName.toLowerCase().includes(searchLower) ||
         teacher.email.toLowerCase().includes(searchLower) ||
-        teacher.gradeAssigned.toLowerCase().includes(searchLower)
+        (teacher.primaryGradeAssigned && teacher.primaryGradeAssigned.toLowerCase().includes(searchLower)) ||
+        (teacher.additionalGrades && teacher.additionalGrades.some(grade => 
+          grade.toLowerCase().includes(searchLower)
+        ))
       );
     }
     
@@ -51,8 +54,9 @@ const Teachers = () => {
   const fetchTeachers = async () => {
     try {
       const response = await teachersAPI.getAll();
-      setTeachers(response.data.teachers);
-      setFilteredTeachers(response.data.teachers); // Initialize filtered list
+      console.log('Fetched teachers:', response.data.teachers); // Debug log
+      setTeachers(response.data.teachers || []);
+      setFilteredTeachers(response.data.teachers || []);
     } catch (error) {
       console.error('Error fetching teachers:', error);
       alert('Error loading teachers: ' + error.message);
@@ -86,22 +90,21 @@ const Teachers = () => {
       lastName: teacher.lastName,
       email: teacher.email,
       phone: teacher.phone,
-      primaryGradeAssigned: teacher.primaryGradeAssigned || 'Day Care', // Updated
-      additionalGrades: teacher.additionalGrades || [], // New
+      primaryGradeAssigned: teacher.primaryGradeAssigned || 'Day Care',
+      additionalGrades: teacher.additionalGrades || [],
       isActive: teacher.isActive !== false
     });
     setShowTeacherForm(true);
   };
 
   const handleDeleteTeacher = async (teacherId) => {
-    // Find the teacher to get their name for the confirmation message
     const teacher = teachers.find(t => t._id === teacherId);
     if (!teacher) {
       alert('Teacher not found!');
       return;
     }
 
-    const confirmMessage = `⚠️ PERMANENT DELETE CONFIRMATION\n\nTeacher: ${teacher.firstName} ${teacher.lastName}\nEmail: ${teacher.email}\nGrade: ${teacher.gradeAssigned}\n\n❌ This action will:\n• Permanently delete this teacher from the database\n• Cannot be undone\n• All records will be lost\n\nAre you ABSOLUTELY sure you want to delete?`;
+    const confirmMessage = `⚠️ PERMANENT DELETE CONFIRMATION\n\nTeacher: ${teacher.firstName} ${teacher.lastName}\nEmail: ${teacher.email}\nPrimary Grade: ${teacher.primaryGradeAssigned}\n\n❌ This action will:\n• Permanently delete this teacher from the database\n• Cannot be undone\n• All records will be lost\n\nAre you ABSOLUTELY sure you want to delete?`;
     
     if (window.confirm(confirmMessage)) {
       try {
@@ -124,14 +127,12 @@ const Teachers = () => {
       try {
         await teachersAPI.update(teacher._id, { isActive: newStatus });
         
-        // Show success message
         if (newStatus) {
-          alert(`✅ Teacher activated successfully! They will now appear in assignments.`);
+          alert(`✅ Teacher activated successfully!`);
         } else {
-          alert(`✅ Teacher deactivated successfully! They will remain in the list but marked as "Inactive".\n\n💡 Tip: Use the status filter to view "Inactive Only" teachers.`);
+          alert(`✅ Teacher deactivated successfully!`);
         }
         
-        // Refresh the list
         fetchTeachers();
       } catch (error) {
         alert('Error updating status: ' + (error.response?.data?.message || error.message));
@@ -153,9 +154,24 @@ const Teachers = () => {
     });
   };
 
-  // Statistics
+  // Statistics - FIXED: Use primaryGradeAssigned instead of gradeAssigned
   const activeCount = teachers.filter(t => t.isActive !== false).length;
   const inactiveCount = teachers.filter(t => t.isActive === false).length;
+  
+  // Count teachers by level - FIXED
+  const primaryTeachersCount = teachers.filter(t => 
+    t.primaryGradeAssigned && 
+    t.primaryGradeAssigned.includes('Grade') && 
+    t.isActive !== false
+  ).length;
+  
+  const prePrimaryTeachersCount = teachers.filter(t => 
+    t.primaryGradeAssigned && 
+    (t.primaryGradeAssigned.includes('PP') || 
+     t.primaryGradeAssigned === 'Playgroup' || 
+     t.primaryGradeAssigned === 'Day Care') && 
+    t.isActive !== false
+  ).length;
 
   if (loading) {
     return (
@@ -181,7 +197,7 @@ const Teachers = () => {
         </div>
       </div>
 
-      {/* Quick Stats - UPDATED */}
+      {/* Quick Stats - FIXED */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Active Teachers Card */}
         <div className="bg-white rounded-lg shadow p-4 text-center border-l-4 border-green-500">
@@ -197,17 +213,13 @@ const Teachers = () => {
 
         {/* Primary Teachers Card */}
         <div className="bg-white rounded-lg shadow p-4 text-center border-l-4 border-blue-500">
-          <p className="text-2xl font-bold text-blue-600">
-            {teachers.filter(t => t.gradeAssigned.includes('Grade') && t.isActive !== false).length}
-          </p>
+          <p className="text-2xl font-bold text-blue-600">{primaryTeachersCount}</p>
           <p className="text-gray-600 text-sm">Primary Teachers</p>
         </div>
 
         {/* Pre-Primary Teachers Card */}
         <div className="bg-white rounded-lg shadow p-4 text-center border-l-4 border-green-500">
-          <p className="text-2xl font-bold text-green-600">
-            {teachers.filter(t => (t.gradeAssigned.includes('PP') || t.gradeAssigned === 'Playgroup' || t.gradeAssigned === 'Day Care') && t.isActive !== false).length}
-          </p>
+          <p className="text-2xl font-bold text-green-600">{prePrimaryTeachersCount}</p>
           <p className="text-gray-600 text-sm">Pre-Primary Teachers</p>
         </div>
       </div>
@@ -334,13 +346,11 @@ const Teachers = () => {
                           type="button"
                           onClick={() => {
                             if (formData.additionalGrades.includes(grade)) {
-                              // Remove if already selected
                               setFormData({
                                 ...formData,
                                 additionalGrades: formData.additionalGrades.filter(g => g !== grade)
                               });
                             } else {
-                              // Add if not selected
                               setFormData({
                                 ...formData,
                                 additionalGrades: [...formData.additionalGrades, grade]
@@ -378,7 +388,6 @@ const Teachers = () => {
                 </div>
               </div>
 
-              {/* Status Field (only for editing) */}
               {editingTeacher && (
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
@@ -424,7 +433,7 @@ const Teachers = () => {
         />
       </div>
 
-      {/* Teachers Table - UPDATED WITH CLICKABLE STATUS */}
+      {/* Teachers Table - FIXED */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full">
@@ -433,7 +442,7 @@ const Teachers = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Teacher Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Phone</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Grade Assigned</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Grades Assigned</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Actions</th>
               </tr>
@@ -444,7 +453,7 @@ const Teachers = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-10 h-10 bg-maroon rounded-full flex items-center justify-center text-white font-bold mr-3">
-                        {teacher.firstName.charAt(0)}{teacher.lastName.charAt(0)}
+                        {teacher.firstName?.charAt(0)}{teacher.lastName?.charAt(0)}
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-900">{teacher.firstName} {teacher.lastName}</p>
@@ -458,13 +467,13 @@ const Teachers = () => {
                       {/* Primary Grade */}
                       <div>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          teacher.primaryGradeAssigned.includes('Grade') ? 'bg-blue-100 text-blue-800' :
-                          teacher.primaryGradeAssigned.includes('PP') ? 'bg-green-100 text-green-800' :
+                          teacher.primaryGradeAssigned?.includes('Grade') ? 'bg-blue-100 text-blue-800' :
+                          teacher.primaryGradeAssigned?.includes('PP') ? 'bg-green-100 text-green-800' :
                           teacher.primaryGradeAssigned === 'Playgroup' ? 'bg-purple-100 text-purple-800' :
                           teacher.primaryGradeAssigned === 'Day Care' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
-                          {teacher.primaryGradeAssigned} (Primary)
+                          {teacher.primaryGradeAssigned || 'Not assigned'} (Primary)
                         </span>
                       </div>
                       
