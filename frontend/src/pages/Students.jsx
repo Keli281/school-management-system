@@ -2,6 +2,35 @@ import React, { useState, useEffect } from 'react';
 import { studentsAPI } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
+// Simple Toast Component for Students page (same as Teachers/Fees pages)
+const Toast = ({ message, type = 'success', onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+
+  return (
+    <div className={`fixed top-4 right-4 z-50 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg border transform transition-all duration-300 animate-slide-in`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          {type === 'success' ? '✅' : '❌'}
+          <span className="ml-2 font-medium">{message}</span>
+        </div>
+        <button
+          onClick={onClose}
+          className="ml-4 text-white hover:text-gray-200"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const Students = () => {
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
@@ -11,7 +40,10 @@ const Students = () => {
   const [showStudentForm, setShowStudentForm] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   
-  // NEW: Pagination states
+  // NEW: Toast state
+  const [toast, setToast] = useState(null);
+  
+  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   
@@ -35,6 +67,11 @@ const Students = () => {
   });
 
   const navigate = useNavigate();
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   useEffect(() => {
     fetchStudents();
@@ -70,6 +107,7 @@ const Students = () => {
       setFilteredStudents(response.data.students);
     } catch (error) {
       console.error('Error fetching students:', error);
+      showToast('Error loading students', 'error');
     } finally {
       setLoading(false);
     }
@@ -80,16 +118,16 @@ const Students = () => {
     try {
       if (editingStudent) {
         await studentsAPI.update(editingStudent._id, formData);
-        alert('Student updated successfully!');
+        showToast('Student updated successfully!');
       } else {
         await studentsAPI.create(formData);
-        alert('Student added successfully!');
+        showToast('Student added successfully!');
       }
       
       resetForm();
       fetchStudents();
     } catch (error) {
-      alert('Error: ' + (error.response?.data?.message || error.message));
+      showToast('Error: ' + (error.response?.data?.message || error.message), 'error');
     }
   };
 
@@ -122,10 +160,10 @@ const Students = () => {
     if (window.confirm('Are you sure you want to delete this student? This action cannot be undone.')) {
       try {
         await studentsAPI.delete(studentId);
-        alert('Student deleted successfully!');
+        showToast('Student deleted successfully!');
         fetchStudents();
       } catch (error) {
-        alert('Error deleting student: ' + (error.response?.data?.message || error.message));
+        showToast('Error deleting student: ' + (error.response?.data?.message || error.message), 'error');
       }
     }
   };
@@ -139,10 +177,10 @@ const Students = () => {
     if (window.confirm(confirmMessage)) {
       try {
         await studentsAPI.update(student._id, { isActive: newStatus });
-        alert(`Student ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+        showToast(`Student ${newStatus ? 'activated' : 'deactivated'} successfully!`);
         fetchStudents();
       } catch (error) {
-        alert('Error updating status: ' + (error.response?.data?.message || error.message));
+        showToast('Error updating status: ' + (error.response?.data?.message || error.message), 'error');
       }
     }
   };
@@ -190,13 +228,13 @@ const Students = () => {
     return `AEC/001/${admissionYear}`;
   };
 
-  // NEW: Pagination calculations
+  // Pagination calculations
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentStudents = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
 
-  // NEW: Handle page change
+  // Handle page change
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
@@ -222,6 +260,9 @@ const Students = () => {
 
   return (
     <div className="space-y-6 pb-8">
+      {/* Toast Notification */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
       <div className="bg-gradient-to-r from-maroon to-dark-maroon rounded-2xl shadow-xl p-6 text-white">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div>
@@ -707,7 +748,7 @@ const Students = () => {
             <p className="text-sm">Try adjusting your search terms or filters</p>
           </div>
         ) : (
-          // NEW: Pagination Controls (Same as Fees.jsx)
+          // Pagination Controls
           <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
             <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
               <div className="text-sm text-gray-700">
