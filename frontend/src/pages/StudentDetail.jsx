@@ -35,8 +35,10 @@ const StudentDetail = () => {
       // Get payments
       try {
         const paymentsRes = await feesAPI.getStudentPayments(decodedAdmissionNumber);
-        setPayments(paymentsRes.data.payments || []);
-        console.log('✅ Payments loaded:', paymentsRes.data.payments?.length || 0);
+        const paymentsData = paymentsRes.data.payments || [];
+        console.log('✅ Payments loaded:', paymentsData.length);
+        console.log('📊 Sample payment object:', paymentsData[0]); // Log first payment for debugging
+        setPayments(paymentsData);
       } catch (paymentError) {
         console.log('⚠️ Could not load payments:', paymentError);
         setPayments([]);
@@ -194,33 +196,53 @@ const StudentDetail = () => {
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Date</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Term</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Grade</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Amount Paid</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Balance</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {paymentsByYear[year].map((payment) => (
-                      <tr key={payment._id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {new Date(payment.datePaid).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            payment.term === 'Term 1' ? 'bg-blue-100 text-blue-800' :
-                            payment.term === 'Term 2' ? 'bg-green-100 text-green-800' :
-                            'bg-purple-100 text-purple-800'
-                          }`}>
-                            {payment.term}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                          KSh {payment.amountPaid?.toLocaleString() || '0'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
-                          KSh {payment.balance?.toLocaleString() || '0'}
-                        </td>
-                      </tr>
-                    ))}
+                    {paymentsByYear[year].map((payment) => {
+                      // Safely get the grade - use payment.grade if available, otherwise fallback to student.grade
+                      const displayGrade = payment.grade || student.grade || 'N/A';
+                      const isCurrentGrade = displayGrade === student.grade;
+                      
+                      return (
+                        <tr key={payment._id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {new Date(payment.datePaid).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              payment.term === 'Term 1' ? 'bg-blue-100 text-blue-800' :
+                              payment.term === 'Term 2' ? 'bg-green-100 text-green-800' :
+                              'bg-purple-100 text-purple-800'
+                            }`}>
+                              {payment.term}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <span 
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                isCurrentGrade 
+                                  ? 'bg-green-100 text-green-800 border border-green-300' 
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}
+                              title={isCurrentGrade ? "Matches current grade" : "Historical grade"}
+                            >
+                              {displayGrade}
+                              {isCurrentGrade && ' ✓'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                            KSh {payment.amountPaid?.toLocaleString() || '0'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
+                            KSh {payment.balance?.toLocaleString() || '0'}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
