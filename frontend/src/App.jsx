@@ -8,7 +8,7 @@ import Login from './pages/Login';
 import Financials from './pages/Financials';
 import Teachers from './pages/Teachers';
 import NonTeachingStaff from './pages/NonTeachingStaff';
-import Payroll from './pages/Payroll'; // NEW: Import Payroll
+import Payroll from './pages/Payroll';
 
 // Simple Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -44,7 +44,7 @@ const NavigationWrapper = ({ children }) => {
     { path: '/students', label: 'Students' },
     { path: '/teachers', label: 'Teachers' },
     { path: '/non-teaching-staff', label: 'Support Staff' },
-    { path: '/payroll', label: 'Payroll' }, // NEW: Added Payroll
+    { path: '/payroll', label: 'Payroll' },
     { path: '/fees', label: 'Fees' },
     { path: '/financials', label: 'Financials' },
   ];
@@ -92,9 +92,7 @@ const NavigationWrapper = ({ children }) => {
               
               {user ? (
                 <div className="flex items-center space-x-3">
-                  <span className="text-sm text-gray-700 hidden lg:inline">
-                    Welcome, Admin
-                  </span>
+                  {/* REMOVED: Welcome, Admin text */}
                   <button 
                     onClick={handleLogout}
                     className="px-3 py-2 text-sm bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
@@ -150,9 +148,7 @@ const NavigationWrapper = ({ children }) => {
                 
                 {user ? (
                   <div className="pt-2 border-t space-y-2">
-                    <div className="px-3 py-2 text-sm text-gray-600">
-                      Welcome, Administrator
-                    </div>
+                    {/* REMOVED: Welcome, Administrator text */}
                     <button 
                       onClick={handleLogout}
                       className="block w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -253,7 +249,6 @@ function App() {
             </NavigationWrapper>
           </ProtectedRoute>
         } />
-        {/* NEW: Payroll Route */}
         <Route path="/payroll" element={
           <ProtectedRoute>
             <NavigationWrapper>

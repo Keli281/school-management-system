@@ -152,6 +152,53 @@ const Payroll = () => {
     }
   };
 
+  // NEW: SIMPLE UNDO PAYMENT FUNCTION - NO BACKEND CHANGES NEEDED
+  const handleUndoPayment = async (type, id, name) => {
+    if (isProcessing) return;
+    
+    if (!window.confirm(`Undo payment for ${name} for ${selectedMonth} ${selectedYear}?\nThis will mark them as unpaid for this month.`)) {
+      return;
+    }
+    
+    setIsProcessing(true);
+    try {
+      // Get current person data
+      const person = type === 'teacher' 
+        ? teachers.find(t => t._id === id)
+        : staff.find(s => s._id === id);
+      
+      if (!person) {
+        showToast(`${type} not found!`, 'error');
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Create updated monthly payments array without the current month's payment
+      const updatedMonthlyPayments = (person.monthlyPayments || []).filter(
+        payment => !(payment.year === selectedYear && payment.month === selectedMonth)
+      );
+      
+      // Update the staff member using the existing update API
+      const updateData = {
+        monthlyPayments: updatedMonthlyPayments
+      };
+      
+      if (type === 'teacher') {
+        await teachersAPI.update(id, updateData);
+      } else {
+        await nonTeachingStaffAPI.update(id, updateData);
+      }
+      
+      showToast(`Payment undone for ${name} (${selectedMonth} ${selectedYear})`);
+      fetchData(); // Refresh data
+    } catch (error) {
+      console.error('Error undoing payment:', error);
+      showToast('Error: ' + error.message, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // NEW: Filter active teachers based on search
   const activeTeachers = teachers.filter(t => t.isActive);
   const filteredTeachers = activeTeachers.filter(teacher => {
@@ -396,7 +443,7 @@ const Payroll = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         KSh {(teacher.salary?.amount || 0).toLocaleString()}
-                      </td>
+                    </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {lastPayment 
                           ? new Date(lastPayment).toLocaleDateString()
@@ -405,17 +452,33 @@ const Payroll = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleMarkPaid('teacher', teacher._id, `${teacher.firstName} ${teacher.lastName}`)}
-                            disabled={isProcessing || isPaid}
-                            className={`px-3 py-1 rounded text-xs font-medium ${
-                              isPaid
-                                ? 'bg-gray-100 text-gray-700 cursor-not-allowed'
-                                : 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50'
-                            }`}
-                          >
-                            {isPaid ? 'Paid ✓' : 'Mark Paid'}
-                          </button>
+                          {isPaid ? (
+                            <>
+                              <button
+                                onClick={() => handleMarkPaid('teacher', teacher._id, `${teacher.firstName} ${teacher.lastName}`)}
+                                disabled={true}
+                                className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium cursor-not-allowed"
+                              >
+                                Paid ✓
+                              </button>
+                              <button
+                                onClick={() => handleUndoPayment('teacher', teacher._id, `${teacher.firstName} ${teacher.lastName}`)}
+                                disabled={isProcessing}
+                                className="px-3 py-1 rounded text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50"
+                                title="Click to undo payment"
+                              >
+                                Undo
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => handleMarkPaid('teacher', teacher._id, `${teacher.firstName} ${teacher.lastName}`)}
+                              disabled={isProcessing}
+                              className="px-3 py-1 rounded text-xs font-medium bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                            >
+                              Mark Paid
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -607,17 +670,33 @@ const Payroll = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleMarkPaid('staff', staffMember._id, `${staffMember.firstName} ${staffMember.lastName}`)}
-                            disabled={isProcessing || isPaid}
-                            className={`px-3 py-1 rounded text-xs font-medium ${
-                              isPaid
-                                ? 'bg-gray-100 text-gray-700 cursor-not-allowed'
-                                : 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50'
-                            }`}
-                          >
-                            {isPaid ? 'Paid ✓' : 'Mark Paid'}
-                          </button>
+                          {isPaid ? (
+                            <>
+                              <button
+                                onClick={() => handleMarkPaid('staff', staffMember._id, `${staffMember.firstName} ${staffMember.lastName}`)}
+                                disabled={true}
+                                className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium cursor-not-allowed"
+                              >
+                                Paid ✓
+                              </button>
+                              <button
+                                onClick={() => handleUndoPayment('staff', staffMember._id, `${staffMember.firstName} ${staffMember.lastName}`)}
+                                disabled={isProcessing}
+                                className="px-3 py-1 rounded text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50"
+                                title="Click to undo payment"
+                              >
+                                Undo
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => handleMarkPaid('staff', staffMember._id, `${staffMember.firstName} ${staffMember.lastName}`)}
+                              disabled={isProcessing}
+                              className="px-3 py-1 rounded text-xs font-medium bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                            >
+                              Mark Paid
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -730,8 +809,15 @@ const Payroll = () => {
             <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
             <span className="text-sm text-gray-700">Pending payment</span>
           </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 rounded-full bg-red-500"></div>
+            <span className="text-sm text-gray-700">Undo payment (click red button)</span>
+          </div>
         </div>
-        
+        <div className="mt-2 text-sm text-gray-600">
+          <p> <strong>Search:</strong> Use the search bars above each table to find specific staff members.</p>
+          <p className="mt-1"> <strong>Undo Mistake:</strong> Click the red "Undo" button next to any paid staff to reverse their payment for that month.</p>
+        </div>
       </div>
     </div>
   );

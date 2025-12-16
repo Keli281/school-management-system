@@ -102,7 +102,7 @@ const Dashboard = () => {
               <i className="fas fa-user-graduate text-blue-600 text-xl"></i>
             </div>
           </div>
-          <p className="text-sm text-gray-500 mt-3">Enrolled students for {currentYear}</p>
+          <p className="text-sm text-gray-500 mt-3">Enrolled students </p>
         </div>
         
         <div className="bg-white rounded-xl shadow-lg p-6 transform hover:scale-[1.02] transition-all duration-300 border-t-4 border-green-500">
