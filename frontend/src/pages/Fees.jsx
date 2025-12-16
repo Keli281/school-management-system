@@ -41,10 +41,10 @@ const Fees = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
   
-  // NEW: Toast state
+  // Toast state
   const [toast, setToast] = useState(null);
   
-  // NEW: Filter states
+  // Filter states
   const [filters, setFilters] = useState({
     academicYear: '',
     term: '',
@@ -53,7 +53,7 @@ const Fees = () => {
     dateTo: ''
   });
   
-  // NEW: Pagination states
+  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   
@@ -65,6 +65,9 @@ const Fees = () => {
     amountPaid: '',
     datePaid: new Date().toISOString().split('T')[0]
   });
+
+  // NEW: State to prevent double submissions
+  const [isSaving, setIsSaving] = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -109,6 +112,10 @@ const Fees = () => {
 
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
+    // NEW: Prevent double submission
+    if (isSaving) return;
+    
+    setIsSaving(true); // NEW: Disable button
     try {
       console.log('🔄 Form submitted with data:', formData);
 
@@ -133,6 +140,8 @@ const Fees = () => {
     } catch (error) {
       console.error('❌ Frontend Error:', error);
       showToast('Error: ' + (error.response?.data?.message || error.message), 'error');
+    } finally {
+      setIsSaving(false); // NEW: Re-enable button
     }
   };
 
@@ -174,6 +183,7 @@ const Fees = () => {
       amountPaid: '',
       datePaid: new Date().toISOString().split('T')[0]
     });
+    setIsSaving(false); // NEW: Reset saving state
   };
 
   // Filter students for dropdown
@@ -200,7 +210,7 @@ const Fees = () => {
     setSearchTerm('');
   };
 
-  // NEW: Apply filters to payments
+  // Apply filters to payments
   const filteredPayments = payments.filter(payment => {
     // Search filter
     if (searchTerm && !payment.studentName.toLowerCase().includes(searchTerm.toLowerCase())) {
@@ -234,18 +244,18 @@ const Fees = () => {
     return true;
   });
 
-  // NEW: Pagination calculations
+  // Pagination calculations
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentPayments = filteredPayments.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
 
-  // NEW: Handle page change
+  // Handle page change
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
 
-  // NEW: Clear all filters
+  // Clear all filters
   const clearFilters = () => {
     setFilters({
       academicYear: '',
@@ -318,7 +328,7 @@ const Fees = () => {
         </div>
       </div>
 
-      {/* NEW: Search and Filter Bar */}
+      {/* Search and Filter Bar */}
       <div className="bg-white rounded-lg shadow p-6 space-y-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h2 className="text-xl font-semibold text-gray-800">Fee Payments</h2>
@@ -460,7 +470,7 @@ const Fees = () => {
         )}
       </div>
 
-      {/* Payment Form Modal - Same as before */}
+      {/* Payment Form Modal */}
       {showPaymentForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
@@ -469,7 +479,7 @@ const Fees = () => {
             </h2>
             
             <form onSubmit={handleSubmitPayment} className="space-y-4">
-              {/* Student dropdown - Same as before */}
+              {/* Student dropdown */}
               <div ref={dropdownRef} className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Student *
@@ -596,14 +606,30 @@ const Fees = () => {
               <div className="flex space-x-3 pt-4">
                 <button
                   type="submit"
-                  className="flex-1 bg-maroon text-white py-2 rounded-lg hover:bg-dark-maroon transition-colors"
+                  disabled={isSaving}
+                  className={`flex-1 py-2 rounded-lg transition-colors ${
+                    isSaving 
+                      ? 'bg-gray-400 cursor-not-allowed text-white' 
+                      : 'bg-maroon hover:bg-dark-maroon text-white'
+                  }`}
                 >
-                  {editingPayment ? 'Update Payment' : 'Record Payment'}
+                  {isSaving ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin h-5 w-5 mr-2 text-white" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      {editingPayment ? 'Updating...' : 'Recording...'}
+                    </span>
+                  ) : (
+                    editingPayment ? 'Update Payment' : 'Record Payment'
+                  )}
                 </button>
                 <button
                   type="button"
                   className="flex-1 bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-400 transition-colors"
                   onClick={resetForm}
+                  disabled={isSaving}
                 >
                   Cancel
                 </button>
@@ -717,7 +743,7 @@ const Fees = () => {
             <p className="text-sm">Try adjusting your search terms or filters</p>
           </div>
         ) : (
-          // NEW: Pagination Controls
+          // Pagination Controls
           <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
             <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
               <div className="text-sm text-gray-700">

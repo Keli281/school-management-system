@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const teacherSchema = new mongoose.Schema({
+const nonTeachingStaffSchema = new mongoose.Schema({
   firstName: {
     type: String,
     required: true,
@@ -23,31 +23,16 @@ const teacherSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  primaryGradeAssigned: {
+  role: {
     type: String,
     required: true,
-    enum: ['Day Care', 'Playgroup', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'],
-    default: 'Day Care'
+    enum: ['Driver', 'Gardener', 'Cleaner', 'Cook', 'Security', 'Other'],
+    default: 'Other'
   },
-  additionalGrades: {
-    type: [String],
-    default: [],
-    validate: {
-      validator: function(grades) {
-        const validGrades = ['Day Care', 'Playgroup', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'];
-        return grades.every(grade => validGrades.includes(grade));
-      },
-      message: 'Invalid grade value in additional grades'
-    }
-  },
-  
-  // NEW: Employment Date (same as NonTeachingStaff)
   employmentDate: {
     type: Date,
     default: Date.now
   },
-  
-  // NEW: Salary information (same structure as NonTeachingStaff)
   salary: {
     amount: {
       type: Number,
@@ -83,13 +68,10 @@ const teacherSchema = new mongoose.Schema({
     }
   }],
   
-  // Simple current status (for quick checks)
   isActive: {
     type: Boolean,
     default: true
   },
-  
-  // Optional notes field
   notes: {
     type: String,
     trim: true,
@@ -99,16 +81,8 @@ const teacherSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Remove any old gradeAssigned field if it exists
-teacherSchema.pre('save', function(next) {
-  if (this.gradeAssigned !== undefined) {
-    this.gradeAssigned = undefined;
-  }
-  next();
-});
-
 // Helper method to get payment status for a specific month
-teacherSchema.methods.getPaymentStatus = function(year, month) {
+nonTeachingStaffSchema.methods.getPaymentStatus = function(year, month) {
   const payment = this.monthlyPayments.find(
     p => p.year === year && p.month === month
   );
@@ -127,7 +101,7 @@ teacherSchema.methods.getPaymentStatus = function(year, month) {
 };
 
 // Helper method to mark as paid for a specific month
-teacherSchema.methods.markAsPaid = function(year, month, amount, notes, paidBy) {
+nonTeachingStaffSchema.methods.markAsPaid = function(year, month, amount, notes, paidBy) {
   // Remove existing payment for this month if any
   this.monthlyPayments = this.monthlyPayments.filter(
     p => !(p.year === year && p.month === month)
@@ -147,4 +121,4 @@ teacherSchema.methods.markAsPaid = function(year, month, amount, notes, paidBy) 
   return this.save();
 };
 
-module.exports = mongoose.model('Teacher', teacherSchema);
+module.exports = mongoose.model('NonTeachingStaff', nonTeachingStaffSchema);

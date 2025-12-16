@@ -7,6 +7,8 @@ import StudentDetail from './pages/StudentDetail';
 import Login from './pages/Login';
 import Financials from './pages/Financials';
 import Teachers from './pages/Teachers';
+import NonTeachingStaff from './pages/NonTeachingStaff';
+import Payroll from './pages/Payroll'; // NEW: Import Payroll
 
 // Simple Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -41,6 +43,8 @@ const NavigationWrapper = ({ children }) => {
     { path: '/', label: 'Dashboard' },
     { path: '/students', label: 'Students' },
     { path: '/teachers', label: 'Teachers' },
+    { path: '/non-teaching-staff', label: 'Support Staff' },
+    { path: '/payroll', label: 'Payroll' }, // NEW: Added Payroll
     { path: '/fees', label: 'Fees' },
     { path: '/financials', label: 'Financials' },
   ];
@@ -239,6 +243,21 @@ function App() {
           <ProtectedRoute>
             <NavigationWrapper>
               <Teachers />
+            </NavigationWrapper>
+          </ProtectedRoute>
+        } />
+        <Route path="/non-teaching-staff" element={
+          <ProtectedRoute>
+            <NavigationWrapper>
+              <NonTeachingStaff />
+            </NavigationWrapper>
+          </ProtectedRoute>
+        } />
+        {/* NEW: Payroll Route */}
+        <Route path="/payroll" element={
+          <ProtectedRoute>
+            <NavigationWrapper>
+              <Payroll />
             </NavigationWrapper>
           </ProtectedRoute>
         } />

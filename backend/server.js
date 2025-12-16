@@ -84,12 +84,14 @@ const authRoutes = require('./routes/auth');
 const studentRoutes = require('./routes/students');
 const teacherRoutes = require('./routes/teachers');
 const feesRoutes = require('./routes/fees'); // Using the main fees.js file
+const nonTeachingStaffRoutes = require('./routes/nonTeachingStaff'); // NEW: Added non-teaching staff routes
 
 // Use routes
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/fees', feesRoutes); // This loads fees.js
 app.use('/api/teachers', teacherRoutes);
+app.use('/api/non-teaching-staff', nonTeachingStaffRoutes); // NEW: Added route for non-teaching staff
 
 // Basic route to test our server
 app.get('/', (req, res) => {
@@ -98,7 +100,14 @@ app.get('/', (req, res) => {
     database: 'MongoDB Connected Successfully!',
     school: 'Awinja Education Center - Real Data System',
     environment: isProduction ? 'Production' : 'Development',
-    port: process.env.PORT || 5000
+    port: process.env.PORT || 5000,
+    routes: {
+      auth: '/api/auth',
+      students: '/api/students',
+      teachers: '/api/teachers',
+      fees: '/api/fees',
+      nonTeachingStaff: '/api/non-teaching-staff' // NEW: Added to status
+    }
   });
 });
 
@@ -165,6 +174,7 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🏫 Awinja School Server running on port ${PORT}`);
   console.log('💰 FEES ROUTE LOADED: fees.js (with updated balance calculation)');
+  console.log('👨‍🍳 NON-TEACHING STAFF ROUTE LOADED: nonTeachingStaff.js'); // NEW: Log message
   console.log('🌐 CORS allowed origins:', allowedOrigins);
   console.log('🔗 Local API URL: http://localhost:' + PORT);
   console.log('📡 Environment:', isProduction ? 'Production' : 'Development');

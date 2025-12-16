@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { teachersAPI } from '../services/api';
+import { nonTeachingStaffAPI } from '../services/api';
 
-// Simple Toast Component for Teachers page (same as Fees page)
+// Simple Toast Component (same as other pages)
 const Toast = ({ message, type = 'success', onClose }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -30,16 +30,15 @@ const Toast = ({ message, type = 'success', onClose }) => {
   );
 };
 
-const Teachers = () => {
-  const [teachers, setTeachers] = useState([]);
-  const [filteredTeachers, setFilteredTeachers] = useState([]);
+const NonTeachingStaff = () => {
+  const [staff, setStaff] = useState([]);
+  const [filteredStaff, setFilteredStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [showTeacherForm, setShowTeacherForm] = useState(false);
-  const [editingTeacher, setEditingTeacher] = useState(null);
-  
-  // Toast state
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [showStaffForm, setShowStaffForm] = useState(false);
+  const [editingStaff, setEditingStaff] = useState(null);
   const [toast, setToast] = useState(null);
   
   // Pagination states
@@ -50,155 +49,158 @@ const Teachers = () => {
     firstName: '',
     lastName: '',
     email: '',
-    phone: '',
-    primaryGradeAssigned: 'Day Care',
-    additionalGrades: [],
+    phone: '+254700000000',
+    role: 'Driver',
     employmentDate: new Date().toISOString().split('T')[0],
     salary: {
       amount: 0,
       currency: 'KSh',
       paymentFrequency: 'Monthly'
     },
+    notes: '',
     isActive: true
   });
 
-  // NEW: State to prevent double submissions
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); // NEW: For disabling save button
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
 
+  const roles = ['Driver', 'Gardener', 'Cleaner', 'Cook', 'Security', 'Other'];
+  const paymentFrequencies = ['Monthly', 'Weekly', 'Daily', 'Other'];
+
   useEffect(() => {
-    fetchTeachers();
+    fetchStaff();
   }, []);
 
-  // Filter teachers when search term or status filter changes
   useEffect(() => {
-    let result = teachers;
+    let result = staff;
     
     // Apply status filter
     if (statusFilter === 'active') {
-      result = result.filter(teacher => teacher.isActive !== false);
+      result = result.filter(staff => staff.isActive !== false);
     } else if (statusFilter === 'inactive') {
-      result = result.filter(teacher => teacher.isActive === false);
+      result = result.filter(staff => staff.isActive === false);
+    }
+    
+    // Apply role filter
+    if (roleFilter !== 'all') {
+      result = result.filter(staff => staff.role === roleFilter);
     }
     
     // Apply search filter
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      result = result.filter(teacher =>
-        teacher.firstName.toLowerCase().includes(searchLower) ||
-        teacher.lastName.toLowerCase().includes(searchLower) ||
-        teacher.email.toLowerCase().includes(searchLower) ||
-        (teacher.primaryGradeAssigned && teacher.primaryGradeAssigned.toLowerCase().includes(searchLower)) ||
-        (teacher.additionalGrades && teacher.additionalGrades.some(grade => 
-          grade.toLowerCase().includes(searchLower)
-        ))
+      result = result.filter(staff =>
+        staff.firstName.toLowerCase().includes(searchLower) ||
+        staff.lastName.toLowerCase().includes(searchLower) ||
+        staff.email.toLowerCase().includes(searchLower) ||
+        staff.role.toLowerCase().includes(searchLower) ||
+        (staff.notes && staff.notes.toLowerCase().includes(searchLower))
       );
     }
     
-    setFilteredTeachers(result);
+    setFilteredStaff(result);
     setCurrentPage(1); // Reset to first page when filters change
-  }, [teachers, searchTerm, statusFilter]);
+  }, [staff, searchTerm, statusFilter, roleFilter]);
 
-  const fetchTeachers = async () => {
+  const fetchStaff = async () => {
     try {
-      const response = await teachersAPI.getAll();
-      setTeachers(response.data.teachers || []);
-      setFilteredTeachers(response.data.teachers || []);
+      const response = await nonTeachingStaffAPI.getAll();
+      setStaff(response.data.staff || []);
+      setFilteredStaff(response.data.staff || []);
     } catch (error) {
-      console.error('Error fetching teachers:', error);
-      showToast('Error loading teachers: ' + error.message, 'error');
+      console.error('Error fetching non-teaching staff:', error);
+      showToast('Error loading staff: ' + error.message, 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmitTeacher = async (e) => {
+  const handleSubmitStaff = async (e) => {
     e.preventDefault();
-    // NEW: Prevent double submission
-    if (isSaving) return;
+    if (isSaving) return; // Prevent double submission
     
-    setIsSaving(true); // NEW: Disable button
+    setIsSaving(true); // Disable save button
     try {
-      if (editingTeacher) {
-        await teachersAPI.update(editingTeacher._id, formData);
-        showToast('Teacher updated successfully!');
+      if (editingStaff) {
+        await nonTeachingStaffAPI.update(editingStaff._id, formData);
+        showToast('Staff member updated successfully!');
       } else {
-        await teachersAPI.create(formData);
-        showToast('Teacher added successfully!');
+        await nonTeachingStaffAPI.create(formData);
+        showToast('Staff member added successfully!');
       }
       
       resetForm();
-      fetchTeachers();
+      fetchStaff();
     } catch (error) {
       showToast('Error: ' + (error.response?.data?.message || error.message), 'error');
     } finally {
-      setIsSaving(false); // NEW: Re-enable button
+      setIsSaving(false); // Re-enable save button
     }
   };
 
-  const handleEditTeacher = (teacher) => {
-    setEditingTeacher(teacher);
+  const handleEditStaff = (staffMember) => {
+    setEditingStaff(staffMember);
     setFormData({
-      firstName: teacher.firstName,
-      lastName: teacher.lastName,
-      email: teacher.email,
-      phone: teacher.phone,
-      primaryGradeAssigned: teacher.primaryGradeAssigned || 'Day Care',
-      additionalGrades: teacher.additionalGrades || [],
-      employmentDate: teacher.employmentDate ? 
-        new Date(teacher.employmentDate).toISOString().split('T')[0] : 
+      firstName: staffMember.firstName,
+      lastName: staffMember.lastName,
+      email: staffMember.email,
+      phone: staffMember.phone,
+      role: staffMember.role,
+      employmentDate: staffMember.employmentDate ? 
+        new Date(staffMember.employmentDate).toISOString().split('T')[0] : 
         new Date().toISOString().split('T')[0],
-      salary: teacher.salary || {
+      salary: staffMember.salary || {
         amount: 0,
         currency: 'KSh',
         paymentFrequency: 'Monthly'
       },
-      isActive: teacher.isActive !== false
+      notes: staffMember.notes || '',
+      isActive: staffMember.isActive !== false
     });
-    setShowTeacherForm(true);
+    setShowStaffForm(true);
   };
 
-  const handleDeleteTeacher = async (teacherId) => {
-    const teacher = teachers.find(t => t._id === teacherId);
-    if (!teacher) {
-      showToast('Teacher not found!', 'error');
+  const handleDeleteStaff = async (staffId) => {
+    const staffMember = staff.find(s => s._id === staffId);
+    if (!staffMember) {
+      showToast('Staff member not found!', 'error');
       return;
     }
 
-    const confirmMessage = `⚠️ PERMANENT DELETE CONFIRMATION\n\nTeacher: ${teacher.firstName} ${teacher.lastName}\nEmail: ${teacher.email}\nPrimary Grade: ${teacher.primaryGradeAssigned}\n\n❌ This action will:\n• Permanently delete this teacher from the database\n• Cannot be undone\n• All records will be lost\n\nAre you ABSOLUTELY sure you want to delete?`;
+    const confirmMessage = `⚠️ PERMANENT DELETE CONFIRMATION\n\nStaff: ${staffMember.firstName} ${staffMember.lastName}\nRole: ${staffMember.role}\n\n❌ This action will:\n• Permanently delete this staff member from the database\n• Cannot be undone\n• All records will be lost\n\nAre you ABSOLUTELY sure you want to delete?`;
     
     if (window.confirm(confirmMessage)) {
       try {
-        await teachersAPI.delete(teacherId);
-        showToast('✅ Teacher permanently deleted from database!');
-        fetchTeachers();
+        await nonTeachingStaffAPI.delete(staffId);
+        showToast('✅ Staff member permanently deleted from database!');
+        fetchStaff();
       } catch (error) {
-        showToast('Error deleting teacher: ' + (error.response?.data?.message || error.message), 'error');
+        showToast('Error deleting staff: ' + (error.response?.data?.message || error.message), 'error');
       }
     }
   };
 
-  const handleToggleStatus = async (teacher) => {
-    const newStatus = !teacher.isActive;
+  const handleToggleStatus = async (staffMember) => {
+    const newStatus = !staffMember.isActive;
     const confirmMessage = newStatus 
-      ? `Activate ${teacher.firstName} ${teacher.lastName}?`
-      : `Deactivate ${teacher.firstName} ${teacher.lastName}? This will hide them from assignments.`;
+      ? `Activate ${staffMember.firstName} ${staffMember.lastName}?`
+      : `Deactivate ${staffMember.firstName} ${staffMember.lastName}? This will hide them from assignments.`;
     
     if (window.confirm(confirmMessage)) {
       try {
-        await teachersAPI.update(teacher._id, { isActive: newStatus });
+        await nonTeachingStaffAPI.update(staffMember._id, { isActive: newStatus });
         
         if (newStatus) {
-          showToast(`✅ Teacher activated successfully!`);
+          showToast(`✅ Staff member activated successfully!`);
         } else {
-          showToast(`✅ Teacher deactivated successfully!`);
+          showToast(`✅ Staff member deactivated successfully!`);
         }
         
-        fetchTeachers();
+        fetchStaff();
       } catch (error) {
         showToast('Error updating status: ' + (error.response?.data?.message || error.message), 'error');
       }
@@ -206,71 +208,51 @@ const Teachers = () => {
   };
 
   const resetForm = () => {
-    setShowTeacherForm(false);
-    setEditingTeacher(null);
+    setShowStaffForm(false);
+    setEditingStaff(null);
     setFormData({
       firstName: '',
       lastName: '',
       email: '',
-      phone: '',
-      primaryGradeAssigned: 'Day Care',
-      additionalGrades: [],
+      phone: '+254700000000',
+      role: 'Driver',
       employmentDate: new Date().toISOString().split('T')[0],
       salary: {
         amount: 0,
         currency: 'KSh',
         paymentFrequency: 'Monthly'
       },
+      notes: '',
       isActive: true
     });
-    setIsSaving(false); // NEW: Reset saving state
+    setIsSaving(false);
   };
 
   // Pagination calculations
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentTeachers = filteredTeachers.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredTeachers.length / itemsPerPage);
+  const currentStaff = filteredStaff.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredStaff.length / itemsPerPage);
 
-  // Handle page change
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
 
-  // Statistics - Use primaryGradeAssigned instead of gradeAssigned
-  const activeCount = teachers.filter(t => t.isActive !== false).length;
-  const inactiveCount = teachers.filter(t => t.isActive === false).length;
-  
-  // Count teachers by level
-  const primaryTeachersCount = teachers.filter(t => 
-    t.isActive !== false && (
-      (t.primaryGradeAssigned && t.primaryGradeAssigned.includes('Grade')) ||
-      (t.additionalGrades && t.additionalGrades.some(grade => grade.includes('Grade')))
-    )
-  ).length;
-  
-  const prePrimaryTeachersCount = teachers.filter(t => 
-    t.isActive !== false && (
-      (t.primaryGradeAssigned && (
-        t.primaryGradeAssigned.includes('PP') || 
-        t.primaryGradeAssigned === 'Playgroup' || 
-        t.primaryGradeAssigned === 'Day Care'
-      )) ||
-      (t.additionalGrades && t.additionalGrades.some(grade => 
-        grade.includes('PP') || grade === 'Playgroup' || grade === 'Day Care'
-      ))
-    )
-  ).length;
+  // Statistics
+  const activeCount = staff.filter(s => s.isActive !== false).length;
+  const inactiveCount = staff.filter(s => s.isActive === false).length;
 
-  // Calculate total monthly salary for active teachers
-  const totalMonthlySalary = teachers
-    .filter(t => t.isActive !== false)
-    .reduce((total, teacher) => {
-      if (teacher.salary?.paymentFrequency === 'Monthly') {
-        return total + (teacher.salary?.amount || 0);
-      }
-      return total;
-    }, 0);
+  // Get role color
+  const getRoleColor = (role) => {
+    switch(role) {
+      case 'Driver': return 'bg-blue-100 text-blue-800';
+      case 'Gardener': return 'bg-green-100 text-green-800';
+      case 'Cleaner': return 'bg-yellow-100 text-yellow-800';
+      case 'Cook': return 'bg-red-100 text-red-800';
+      case 'Security': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   if (loading) {
     return (
@@ -289,59 +271,63 @@ const Teachers = () => {
       <div className="bg-gradient-to-r from-maroon to-dark-maroon rounded-2xl shadow-xl p-6 text-white">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-black">Teachers Management</h1>
-            <p className="text-gold mt-2">Manage teaching staff and class assignments</p>
+            <h1 className="text-3xl font-bold text-black">Non-Teaching Staff</h1>
+            <p className="text-gold mt-2">Manage support staff (drivers, cleaners, security, etc.)</p>
           </div>
           <div className="mt-4 md:mt-0 text-center md:text-right">
-            <p className="text-2xl font-bold text-black">{teachers.length}</p>
-            <p className="text-sm text-gold">Total Teachers</p>
+            <p className="text-2xl font-bold text-black">{staff.length}</p>
+            <p className="text-sm text-gold">Total Staff</p>
           </div>
         </div>
       </div>
 
-      {/* Quick Stats - UPDATED WITH SALARY */}
+      {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Active Teachers Card */}
+        {/* Active Staff Card */}
         <div className="bg-white rounded-lg shadow p-4 text-center border-l-4 border-green-500">
           <p className="text-2xl font-bold text-green-600">{activeCount}</p>
-          <p className="text-gray-600 text-sm">Active Teachers</p>
+          <p className="text-gray-600 text-sm">Active Staff</p>
         </div>
 
-        {/* Inactive Teachers Card */}
+        {/* Inactive Staff Card */}
         <div className="bg-white rounded-lg shadow p-4 text-center border-l-4 border-gray-400">
           <p className="text-2xl font-bold text-gray-600">{inactiveCount}</p>
-          <p className="text-gray-600 text-sm">Inactive Teachers</p>
+          <p className="text-gray-600 text-sm">Inactive Staff</p>
+        </div>
+
+        {/* Role Distribution Card */}
+        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">Roles Distribution</h3>
+          <div className="space-y-1">
+            {roles.map(role => {
+              const count = staff.filter(s => s.role === role && s.isActive !== false).length;
+              if (count === 0) return null;
+              return (
+                <div key={role} className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">{role}</span>
+                  <span className="text-sm font-medium text-gray-800">{count}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Total Monthly Salary Card */}
-        <div className="bg-white rounded-lg shadow p-4 text-center border-l-4 border-blue-500">
-          <p className="text-2xl font-bold text-blue-600">
-            KSh {totalMonthlySalary.toLocaleString()}
-          </p>
-          <p className="text-gray-600 text-sm">Monthly Salary Total</p>
-          <p className="text-xs text-gray-500 mt-1">Active teachers only</p>
-        </div>
-
-        {/* Grade Distribution Card */}
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Grade Distribution</h3>
-          <div className="space-y-1">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Primary</span>
-              <span className="text-sm font-medium text-gray-800">{primaryTeachersCount}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Pre-Primary</span>
-              <span className="text-sm font-medium text-gray-800">{prePrimaryTeachersCount}</span>
-            </div>
+        <div className="bg-white rounded-lg shadow p-4 text-center border-l-4 border-purple-500">
+          <div className="text-2xl font-bold text-purple-600">
+            KSh {staff
+              .filter(s => s.isActive !== false && s.salary?.paymentFrequency === 'Monthly')
+              .reduce((total, s) => total + (s.salary?.amount || 0), 0)
+              .toLocaleString()}
           </div>
+          <p className="text-gray-600 text-sm">Monthly Salary Total</p>
         </div>
       </div>
 
       {/* Action Bar with Filters */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-          <h2 className="text-xl font-semibold text-gray-800">Teaching Staff</h2>
+          <h2 className="text-xl font-semibold text-gray-800">Support Staff Records</h2>
           
           <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4">
             {/* Status Filter */}
@@ -352,18 +338,33 @@ const Teachers = () => {
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
-                <option value="all">All Teachers ({teachers.length})</option>
-                <option value="active">Active Only ({activeCount})</option>
-                <option value="inactive">Inactive Only ({inactiveCount})</option>
+                <option value="all">All Staff</option>
+                <option value="active">Active Only</option>
+                <option value="inactive">Inactive Only</option>
               </select>
             </div>
 
-            {/* Add Teacher Button */}
+            {/* Role Filter */}
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Role:</span>
+              <select
+                className="px-3 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+              >
+                <option value="all">All Roles</option>
+                {roles.map(role => (
+                  <option key={role} value={role}>{role}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Add Staff Button */}
             <button 
               className="bg-maroon text-white px-4 py-2 rounded-lg hover:bg-dark-maroon transition-colors flex items-center"
-              onClick={() => setShowTeacherForm(true)}
+              onClick={() => setShowStaffForm(true)}
             >
-              <span className="mr-2">+</span> Add Teacher
+              <span className="mr-2">+</span> Add Staff
             </button>
           </div>
         </div>
@@ -373,21 +374,21 @@ const Teachers = () => {
       <div className="bg-white rounded-lg shadow p-4">
         <input
           type="text"
-          placeholder="Search teachers by name, email, or grade..."
+          placeholder="Search staff by name, email, or role..."
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
-      {/* Teacher Form Modal - UPDATED WITH SALARY AND EMPLOYMENT DATE */}
-      {showTeacherForm && (
+      {/* Staff Form Modal */}
+      {showStaffForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4 text-maroon">
-              {editingTeacher ? 'Edit Teacher' : 'Add New Teacher'}
+              {editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
             </h2>
-            <form onSubmit={handleSubmitTeacher} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmitStaff} className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
                 <input
@@ -420,7 +421,7 @@ const Teachers = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  placeholder="teacher@awinja.edu"
+                  placeholder="staff@awinja.edu"
                 />
               </div>
 
@@ -437,37 +438,31 @@ const Teachers = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Employment Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+                <select
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
+                  value={formData.role}
+                  onChange={(e) => setFormData({...formData, role: e.target.value})}
+                >
+                  {roles.map(role => (
+                    <option key={role} value={role}>{role}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Employment Date *</label>
                 <input
                   type="date"
+                  required
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
                   value={formData.employmentDate}
                   onChange={(e) => setFormData({...formData, employmentDate: e.target.value})}
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Primary Grade Assigned *
-                </label>
-                <select
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
-                  value={formData.primaryGradeAssigned}
-                  onChange={(e) => setFormData({...formData, primaryGradeAssigned: e.target.value})}
-                >
-                  <option value="Day Care">Day Care</option>
-                  <option value="Playgroup">Playgroup</option>
-                  <option value="PP1">PP1</option>
-                  <option value="PP2">PP2</option>
-                  <option value="Grade 1">Grade 1</option>
-                  <option value="Grade 2">Grade 2</option>
-                  <option value="Grade 3">Grade 3</option>
-                  <option value="Grade 4">Grade 4</option>
-                </select>
-              </div>
-
-              {/* Salary Information - NEW SECTION */}
+              {/* Salary Information */}
               <div className="md:col-span-2 border-t pt-4 mt-2">
                 <h3 className="text-lg font-medium text-maroon mb-3">Salary Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -476,13 +471,10 @@ const Teachers = () => {
                     <input
                       type="number"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
-                      value={formData.salary?.amount || 0}
+                      value={formData.salary.amount}
                       onChange={(e) => setFormData({
                         ...formData,
-                        salary: { 
-                          ...formData.salary, 
-                          amount: parseInt(e.target.value) || 0 
-                        }
+                        salary: { ...formData.salary, amount: parseInt(e.target.value) || 0 }
                       })}
                       placeholder="0"
                     />
@@ -493,7 +485,7 @@ const Teachers = () => {
                     <input
                       type="text"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
-                      value={formData.salary?.currency || 'KSh'}
+                      value={formData.salary.currency}
                       onChange={(e) => setFormData({
                         ...formData,
                         salary: { ...formData.salary, currency: e.target.value }
@@ -506,78 +498,32 @@ const Teachers = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Payment Frequency</label>
                     <select
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
-                      value={formData.salary?.paymentFrequency || 'Monthly'}
+                      value={formData.salary.paymentFrequency}
                       onChange={(e) => setFormData({
                         ...formData,
                         salary: { ...formData.salary, paymentFrequency: e.target.value }
                       })}
                     >
-                      <option value="Monthly">Monthly</option>
-                      <option value="Weekly">Weekly</option>
-                      <option value="Daily">Daily</option>
-                      <option value="Other">Other</option>
+                      {paymentFrequencies.map(freq => (
+                        <option key={freq} value={freq}>{freq}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Additional Grades (Optional)
-                </label>
-                <div className="space-y-2">
-                  <div className="flex flex-wrap gap-2">
-                    {['Day Care', 'Playgroup', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4']
-                      .filter(grade => grade !== formData.primaryGradeAssigned)
-                      .map(grade => (
-                        <button
-                          key={grade}
-                          type="button"
-                          onClick={() => {
-                            if (formData.additionalGrades.includes(grade)) {
-                              setFormData({
-                                ...formData,
-                                additionalGrades: formData.additionalGrades.filter(g => g !== grade)
-                              });
-                            } else {
-                              setFormData({
-                                ...formData,
-                                additionalGrades: [...formData.additionalGrades, grade]
-                              });
-                            }
-                          }}
-                          className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                            formData.additionalGrades.includes(grade)
-                              ? 'bg-maroon text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                        >
-                          {grade} {formData.additionalGrades.includes(grade) ? '✓' : '+'}
-                        </button>
-                      ))
-                    }
-                  </div>
-                  {formData.additionalGrades.length > 0 ? (
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-600">Selected additional grades:</p>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {formData.additionalGrades.map(grade => (
-                          <span
-                            key={grade}
-                            className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full"
-                          >
-                            {grade}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500">Select grades this teacher also teaches</p>
-                  )}
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+                <textarea
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-maroon focus:border-maroon transition-colors"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                  placeholder="Additional notes..."
+                  rows="3"
+                />
               </div>
 
-              {editingTeacher && (
+              {editingStaff && (
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                   <select
@@ -607,10 +553,10 @@ const Teachers = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      {editingTeacher ? 'Updating...' : 'Adding...'}
+                      {editingStaff ? 'Updating...' : 'Adding...'}
                     </span>
                   ) : (
-                    editingTeacher ? 'Update Teacher' : 'Add Teacher'
+                    editingStaff ? 'Update Staff' : 'Add Staff'
                   )}
                 </button>
                 <button
@@ -627,95 +573,71 @@ const Teachers = () => {
         </div>
       )}
 
-      {/* Teachers Table - UPDATED WITH SALARY AND EMPLOYMENT DATE COLUMNS */}
+      {/* Staff Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Teacher Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Staff Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Phone</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Primary Grade</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Monthly Salary</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Salary</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Employed Since</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-maroon uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {currentTeachers.map((teacher) => (
-                <tr key={teacher._id} className="hover:bg-gray-50 transition-colors">
+              {currentStaff.map((staffMember) => (
+                <tr key={staffMember._id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-10 h-10 bg-maroon rounded-full flex items-center justify-center text-white font-bold mr-3">
-                        {teacher.firstName?.charAt(0)}{teacher.lastName?.charAt(0)}
+                        {staffMember.firstName?.charAt(0)}{staffMember.lastName?.charAt(0)}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{teacher.firstName} {teacher.lastName}</p>
-                        {teacher.additionalGrades && teacher.additionalGrades.length > 0 && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            Also teaches: {teacher.additionalGrades.slice(0, 2).join(', ')}
-                            {teacher.additionalGrades.length > 2 && ` +${teacher.additionalGrades.length - 2} more`}
-                          </p>
-                        )}
+                        <p className="text-sm font-medium text-gray-900">{staffMember.firstName} {staffMember.lastName}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.phone}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{staffMember.email}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{staffMember.phone}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      teacher.primaryGradeAssigned?.includes('Grade') ? 'bg-blue-100 text-blue-800' :
-                      teacher.primaryGradeAssigned?.includes('PP') ? 'bg-green-100 text-green-800' :
-                      teacher.primaryGradeAssigned === 'Playgroup' ? 'bg-purple-100 text-purple-800' :
-                      teacher.primaryGradeAssigned === 'Day Care' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {teacher.primaryGradeAssigned || 'Not assigned'}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(staffMember.role)}`}>
+                      {staffMember.role}
                     </span>
                   </td>
-                  {/* NEW: Salary Column */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div className="font-medium">
-                      KSh {(teacher.salary?.amount || 0).toLocaleString()}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      per {teacher.salary?.paymentFrequency || 'Month'}
-                    </div>
+                    KSh {(staffMember.salary?.amount || 0).toLocaleString()}
+                    <span className="text-xs text-gray-500 ml-1">/{staffMember.salary?.paymentFrequency || 'Monthly'}</span>
                   </td>
-                  {/* NEW: Employment Date Column */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {teacher.employmentDate ? 
-                      new Date(teacher.employmentDate).toLocaleDateString('en-GB', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric'
-                      }) : 'N/A'
-                    }
+                    {new Date(staffMember.employmentDate).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <button
-                      onClick={() => handleToggleStatus(teacher)}
+                      onClick={() => handleToggleStatus(staffMember)}
                       className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                        teacher.isActive !== false 
+                        staffMember.isActive !== false 
                           ? 'bg-green-100 text-green-800 hover:bg-green-200' 
                           : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                       }`}
                     >
-                      {teacher.isActive !== false ? 'Active' : 'Inactive'}
+                      {staffMember.isActive !== false ? 'Active' : 'Inactive'}
                     </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       <button
-                        onClick={() => handleEditTeacher(teacher)}
+                        onClick={() => handleEditStaff(staffMember)}
                         className="text-blue-600 hover:text-blue-800 transition-colors"
                       >
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDeleteTeacher(teacher._id)}
+                        onClick={() => handleDeleteStaff(staffMember._id)}
                         className="text-red-600 hover:text-red-800 transition-colors"
                       >
                         Delete
@@ -728,31 +650,31 @@ const Teachers = () => {
           </table>
         </div>
         
-        {filteredTeachers.length === 0 ? (
+        {filteredStaff.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            <div className="text-6xl mb-4">👨‍🏫</div>
-            <p className="text-lg mb-2">No teachers found</p>
+            <div className="text-6xl mb-4">👨‍🍳</div>
+            <p className="text-lg mb-2">No staff members found</p>
             {statusFilter === 'inactive' && inactiveCount === 0 ? (
-              <p className="text-sm">No inactive teachers found. Deactivate a teacher first.</p>
+              <p className="text-sm">No inactive staff found. Deactivate a staff member first.</p>
             ) : (
               <p className="text-sm">Try adjusting your search terms or filters</p>
             )}
           </div>
         ) : (
-          // Pagination Controls (Same as Students/Fees pages)
+          // Pagination Controls
           <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
             <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
               <div className="text-sm text-gray-700">
                 Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{' '}
                 <span className="font-medium">
-                  {Math.min(indexOfLastItem, filteredTeachers.length)}
+                  {Math.min(indexOfLastItem, filteredStaff.length)}
                 </span>{' '}
-                of <span className="font-medium">{filteredTeachers.length}</span> teachers
+                of <span className="font-medium">{filteredStaff.length}</span> staff members
               </div>
               
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700">Teachers per page:</span>
+                  <span className="text-sm text-gray-700">Staff per page:</span>
                   <select
                     className="px-2 py-1 border border-gray-300 rounded text-sm"
                     value={itemsPerPage}
@@ -827,29 +749,19 @@ const Teachers = () => {
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-600">
-            Showing {currentTeachers.length} of {filteredTeachers.length} teachers (Page {currentPage} of {totalPages}) • 
+            Showing {currentStaff.length} of {filteredStaff.length} staff members (Page {currentPage} of {totalPages}) • 
             <span className="ml-2">
               <span className="text-green-600 font-medium">{activeCount} active</span>
               {inactiveCount > 0 && <span className="ml-2 text-gray-600">{inactiveCount} inactive</span>}
             </span>
           </span>
-          <div className="flex space-x-2">
-            <span className="text-sm font-medium text-maroon">
-              Total: {teachers.length} teachers
-            </span>
-            {statusFilter !== 'all' && (
-              <button
-                onClick={() => setStatusFilter('all')}
-                className="text-sm text-blue-600 hover:text-blue-800"
-              >
-                Show All
-              </button>
-            )}
-          </div>
+          <span className="text-sm font-medium text-maroon">
+            Total: {staff.length} staff members
+          </span>
         </div>
       </div>
     </div>
   );
 };
 
-export default Teachers;
+export default NonTeachingStaff;

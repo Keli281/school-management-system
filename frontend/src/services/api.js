@@ -68,6 +68,36 @@ export const teachersAPI = {
   update: (id, teacherData) => api.put(`/teachers/${id}`, teacherData),
   delete: (id) => api.delete(`/teachers/${id}`),
   getByGrade: (grade) => api.get(`/teachers/grade/${grade}`),
+  
+  // Payroll endpoints
+  markPaid: (id, paymentData) => api.post(`/teachers/${id}/mark-paid`, paymentData),
+  getPaymentStatus: (id, year, month) => api.get(`/teachers/${id}/payment-status/${year}/${month}`),
+  getPaymentHistory: (id) => api.get(`/teachers/${id}/payment-history`),
+  bulkMarkPaid: (paymentData) => api.post('/teachers/bulk/mark-paid', paymentData),
+  getPayrollSummary: (year, month) => api.get(`/teachers/payroll/summary/${year}/${month}`)
+};
+
+// Non-Teaching Staff API
+export const nonTeachingStaffAPI = {
+  getAll: () => api.get('/non-teaching-staff'),
+  getById: (id) => api.get(`/non-teaching-staff/${id}`),
+  create: (staffData) => api.post('/non-teaching-staff', staffData),
+  update: (id, staffData) => api.put(`/non-teaching-staff/${id}`, staffData),
+  delete: (id) => api.delete(`/non-teaching-staff/${id}`),
+  getByRole: (role) => api.get(`/non-teaching-staff/role/${role}`),
+  getStats: () => api.get('/non-teaching-staff/stats/summary'),
+  
+  // Payroll endpoints
+  markPaid: (id, paymentData) => api.post(`/non-teaching-staff/${id}/mark-paid`, paymentData),
+  getPaymentStatus: (id, year, month) => api.get(`/non-teaching-staff/${id}/payment-status/${year}/${month}`),
+  getPaymentHistory: (id) => api.get(`/non-teaching-staff/${id}/payment-history`),
+  bulkMarkPaid: (paymentData) => api.post('/non-teaching-staff/bulk/mark-paid', paymentData),
+  getPayrollSummary: (year, month) => api.get(`/non-teaching-staff/payroll/summary/${year}/${month}`)
+};
+
+// NEW: Combined Payroll API (for both teachers and staff)
+export const payrollAPI = {
+  // You can add combined endpoints here if needed
 };
 
 export default api;

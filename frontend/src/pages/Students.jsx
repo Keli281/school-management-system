@@ -40,7 +40,7 @@ const Students = () => {
   const [showStudentForm, setShowStudentForm] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   
-  // NEW: Toast state
+  // Toast state
   const [toast, setToast] = useState(null);
   
   // Pagination states
@@ -65,6 +65,9 @@ const Students = () => {
     dateOfAdmission: new Date().toISOString().split('T')[0],
     isActive: true
   });
+
+  // NEW: State to prevent double submissions
+  const [isSaving, setIsSaving] = useState(false);
 
   const navigate = useNavigate();
 
@@ -115,6 +118,10 @@ const Students = () => {
 
   const handleSubmitStudent = async (e) => {
     e.preventDefault();
+    // NEW: Prevent double submission
+    if (isSaving) return;
+    
+    setIsSaving(true); // NEW: Disable button
     try {
       if (editingStudent) {
         await studentsAPI.update(editingStudent._id, formData);
@@ -128,6 +135,8 @@ const Students = () => {
       fetchStudents();
     } catch (error) {
       showToast('Error: ' + (error.response?.data?.message || error.message), 'error');
+    } finally {
+      setIsSaving(false); // NEW: Re-enable button
     }
   };
 
@@ -206,6 +215,7 @@ const Students = () => {
       dateOfAdmission: new Date().toISOString().split('T')[0],
       isActive: true
     });
+    setIsSaving(false); // NEW: Reset saving state
   };
 
   const generateAdmissionNumber = () => {
@@ -607,14 +617,30 @@ const Students = () => {
               <div className="md:col-span-2 flex space-x-3 pt-4">
                 <button
                   type="submit"
-                  className="flex-1 bg-maroon text-white py-2 rounded-lg hover:bg-dark-maroon transition-colors"
+                  disabled={isSaving}
+                  className={`flex-1 py-2 rounded-lg transition-colors ${
+                    isSaving 
+                      ? 'bg-gray-400 cursor-not-allowed text-white' 
+                      : 'bg-maroon hover:bg-dark-maroon text-white'
+                  }`}
                 >
-                  {editingStudent ? 'Update Student' : 'Add Student'}
+                  {isSaving ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin h-5 w-5 mr-2 text-white" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      {editingStudent ? 'Updating...' : 'Adding...'}
+                    </span>
+                  ) : (
+                    editingStudent ? 'Update Student' : 'Add Student'
+                  )}
                 </button>
                 <button
                   type="button"
                   className="flex-1 bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-400 transition-colors"
                   onClick={resetForm}
+                  disabled={isSaving}
                 >
                   Cancel
                 </button>
@@ -740,7 +766,8 @@ const Students = () => {
             </tbody>
           </table>
         </div>
-        
+      
+
         {filteredStudents.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <i className="fas fa-user-graduate text-gray-300 text-6xl mb-4"></i>
@@ -748,10 +775,10 @@ const Students = () => {
             <p className="text-sm">Try adjusting your search terms or filters</p>
           </div>
         ) : (
-          // Pagination Controls
-          <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+          // Fixed Pagination Controls
+          <div className="bg-gray-50 px-4 sm:px-6 py-4 border-t border-gray-200">
             <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-              <div className="text-sm text-gray-700">
+              <div className="text-sm text-gray-700 text-center sm:text-left">
                 Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{' '}
                 <span className="font-medium">
                   {Math.min(indexOfLastItem, filteredStudents.length)}
@@ -759,11 +786,11 @@ const Students = () => {
                 of <span className="font-medium">{filteredStudents.length}</span> students
               </div>
               
-              <div className="flex items-center space-x-4">
+              <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4">
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-700">Students per page:</span>
                   <select
-                    className="px-2 py-1 border border-gray-300 rounded text-sm"
+                    className="px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-maroon"
                     value={itemsPerPage}
                     onChange={(e) => {
                       setItemsPerPage(Number(e.target.value));
@@ -781,7 +808,7 @@ const Students = () => {
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className={`px-3 py-1 rounded-md text-sm ${
+                    className={`px-3 py-1.5 rounded-md text-sm ${
                       currentPage === 1
                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                         : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
@@ -801,7 +828,7 @@ const Students = () => {
                         <button
                           key={pageNumber}
                           onClick={() => handlePageChange(pageNumber)}
-                          className={`px-3 py-1 rounded-md text-sm ${
+                          className={`px-3 py-1.5 rounded-md text-sm ${
                             currentPage === pageNumber
                               ? 'bg-maroon text-white'
                               : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
@@ -817,7 +844,7 @@ const Students = () => {
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className={`px-3 py-1 rounded-md text-sm ${
+                    className={`px-3 py-1.5 rounded-md text-sm ${
                       currentPage === totalPages
                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                         : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
